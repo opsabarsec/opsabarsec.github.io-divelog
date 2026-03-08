@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as certifications from "../certifications.js";
 import type * as dives from "../dives.js";
 import type * as files from "../files.js";
 
@@ -18,6 +19,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  certifications: typeof certifications;
   dives: typeof dives;
   files: typeof files;
 }>;

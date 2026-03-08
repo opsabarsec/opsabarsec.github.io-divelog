@@ -17,3 +17,9 @@ NEXT_PUBLIC_API_URL= localhost.xxxx
 FISHAL_API_KEY = 
 
 FISHAL_API_ID = 
+
+NAME_SURNAME = 'Gipo Farassino'
+
+PROFILE_PHOTO = 'myphoto_dive.jpg'
+
+PROFILE_PASSWORD = 'my_password121!'
