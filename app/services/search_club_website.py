@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Search for diving club websites using DuckDuckGo HTML scraping.
-Usage: python search_club.py "Marseille Dive Club"
+Usage: python app/services/search_club_website.py "Marseille Dive Club"
 """
 
 import argparse

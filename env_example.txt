@@ -5,16 +5,14 @@ CONVEX_DEPLOYMENT= # team: xxxx, project: scubalogs
 CONVEX_URL= 
 
 
-# Deployment used by `npx convex dev`
-CONVEX_DEPLOYMENT=
 
 # Geoapify API key for maps and geocoding
 # Get your free API key at: https://www.geoapify.com/
 NEXT_PUBLIC_GEOAPIFY_API_KEY=
-
+MY_EMAIL =
 
 # API Keys
-NEXT_PUBLIC_API_URL=
+NEXT_PUBLIC_API_URL= localhost.xxxx
 
 FISHAL_API_KEY = 
 

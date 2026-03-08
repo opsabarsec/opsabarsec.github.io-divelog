@@ -340,8 +340,8 @@ async def resolve_dive_metadata(payload: ResolveMetadataRequest) -> ResolveMetad
     club_website = None
     try:
         result = search_club_website(payload.club_name)
-        if result.get("success") and result.get("club_website"):
-            club_website = result["club_website"]
+        if result.get("success") and result.get("url"):
+            club_website = result["url"]
     except Exception:
         pass
 
