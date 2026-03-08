@@ -68,3 +68,40 @@ export const getDiveById = query({
     return await ctx.db.get(args.id);
   },
 });
+
+export const getAllDives = query({
+  args: { user_id: v.string() },
+  handler: async (ctx, args) => {
+    const dives = await ctx.db
+      .query("dives")
+      .withIndex("by_dive_number", (q) => q.eq("user_id", args.user_id))
+      .collect();
+    // Sort by dive_date descending (most recent first)
+    return dives.sort((a, b) => b.dive_date - a.dive_date);
+  },
+});
+
+export const getLatestDive = query({
+  args: { user_id: v.string() },
+  handler: async (ctx, args) => {
+    const dives = await ctx.db
+      .query("dives")
+      .withIndex("by_dive_number", (q) => q.eq("user_id", args.user_id))
+      .collect();
+    if (dives.length === 0) return null;
+    // Return the dive with the most recent dive_date
+    return dives.sort((a, b) => b.dive_date - a.dive_date)[0];
+  },
+});
+
+export const deleteDive = mutation({
+  args: { id: v.id("dives") },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db.get(args.id);
+    if (!existing) {
+      throw new Error(`Dive with id ${args.id} not found`);
+    }
+    await ctx.db.delete(args.id);
+    return { success: true, deleted_id: args.id };
+  },
+});

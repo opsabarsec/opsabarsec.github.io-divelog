@@ -1,6 +1,7 @@
 from typing import Optional, Any
 from fastapi import FastAPI, Query, UploadFile, File, Response
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 import httpx
 import os
@@ -18,6 +19,15 @@ env_path = ".env"
 load_dotenv(env_path)
 
 app = FastAPI()
+
+# CORS middleware for frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 # ---------------------------------------------------------
@@ -52,6 +62,20 @@ class Dive(BaseModel):
     briefed: bool = Field(default=True, serialization_alias="Briefed")
 
 
+class Certification(BaseModel):
+    user_id: str
+    name: str                              # e.g., "Open Water Diver"
+    agency: str                            # e.g., "PADI", "SSI"
+    certification_date: int                # Unix timestamp in milliseconds
+    certification_number: Optional[str] = None
+    instructor_name: Optional[str] = None
+    dive_center: Optional[str] = None
+
+
+class LoginRequest(BaseModel):
+    password: str
+
+
 class ResolveMetadataRequest(BaseModel):
     location_name: str
     club_name: str
@@ -73,8 +97,6 @@ class ResolveMetadataResponse(BaseModel):
 # ---------------------------------------------------------
 # File upload: Upload a photo to Convex storage
 # ---------------------------------------------------------
-
-app = FastAPI()
 
 CONVEX_URL = os.environ["CONVEX_URL"]  # e.g. https://my-app-123.convex.cloud
 CONVEX_GENERATE_URL_FN = os.getenv("CONVEX_GENERATE_URL_FN", "files:generateUploadUrl")
@@ -369,6 +391,7 @@ async def upsert_dive(dive: Dive) -> Any:
     - coordinates
     - OSM link
     """
+    print(f"[DEBUG] Upserting dive for user_id: {dive.user_id}")
 
     # Fill missing geolocation data
     if dive.latitude is None or dive.longitude is None:
@@ -407,6 +430,38 @@ async def upsert_dive(dive: Dive) -> Any:
 
 
 # ---------------------------------------------------------
+# Get Latest Dive (must be before /dives/{dive_id})
+# ---------------------------------------------------------
+
+
+@app.get("/dives/latest")
+async def get_latest_dive(user_id: str = Query(..., description="User ID")) -> Any:
+    """Get the most recent dive for a user."""
+    print(f"[DEBUG] Getting latest dive for user_id: {user_id}")
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            f"{CONVEX_URL}/api/query",
+            json={
+                "path": "dives:getLatestDive",
+                "args": {"user_id": user_id},
+                "format": "json",
+            },
+        )
+        resp.raise_for_status()
+        data = resp.json()
+
+    if "error" in data:
+        return JSONResponse(status_code=400, content={"error": data["error"], "convex_error": True})
+
+    result = data.get("value")
+    print(f"[DEBUG] getLatestDive result for {user_id}: {result}")
+    if result is None:
+        return JSONResponse(status_code=404, content={"error": "No dives found for user"})
+
+    return result
+
+
+# ---------------------------------------------------------
 # Get Dive by ID
 # ---------------------------------------------------------
 
@@ -436,6 +491,184 @@ async def get_dive_by_id(dive_id: str) -> Any:
         )
 
     return result
+
+
+@app.delete("/dives/{dive_id}")
+async def delete_dive(dive_id: str) -> Any:
+    """Delete a dive from Convex."""
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            f"{CONVEX_URL}/api/mutation",
+            json={
+                "path": "dives:deleteDive",
+                "args": {"id": dive_id},
+                "format": "json",
+            },
+        )
+        resp.raise_for_status()
+        data = resp.json()
+
+    if "error" in data:
+        return JSONResponse(status_code=400, content={"error": data["error"], "convex_error": True})
+
+    return data.get("value", {"success": True})
+
+
+# ---------------------------------------------------------
+# List Dives Endpoints
+# ---------------------------------------------------------
+
+
+@app.get("/dives")
+async def list_dives(user_id: str = Query(..., description="User ID")) -> Any:
+    """List all dives for a user, sorted by date (most recent first)."""
+    print(f"[DEBUG] Listing dives for user_id: {user_id}")
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            f"{CONVEX_URL}/api/query",
+            json={
+                "path": "dives:getAllDives",
+                "args": {"user_id": user_id},
+                "format": "json",
+            },
+        )
+        resp.raise_for_status()
+        data = resp.json()
+
+    if "error" in data:
+        return JSONResponse(status_code=400, content={"error": data["error"], "convex_error": True})
+
+    result = data.get("value", [])
+    print(f"[DEBUG] Found {len(result)} dives for user_id: {user_id}")
+    return result
+
+
+# ---------------------------------------------------------
+# Certifications Endpoints
+# ---------------------------------------------------------
+
+
+@app.get("/certifications")
+async def list_certifications(user_id: str = Query(..., description="User ID")) -> Any:
+    """List all certifications for a user."""
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            f"{CONVEX_URL}/api/query",
+            json={
+                "path": "certifications:getAllCertifications",
+                "args": {"user_id": user_id},
+                "format": "json",
+            },
+        )
+        resp.raise_for_status()
+        data = resp.json()
+
+    if "error" in data:
+        return JSONResponse(status_code=400, content={"error": data["error"], "convex_error": True})
+
+    return data.get("value", [])
+
+
+@app.post("/certifications")
+async def add_certification(cert: Certification) -> Any:
+    """Add a new certification."""
+    payload = cert.model_dump(exclude_none=True)
+
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            f"{CONVEX_URL}/api/mutation",
+            json={
+                "path": "certifications:addCertification",
+                "args": payload,
+                "format": "json",
+            },
+        )
+        resp.raise_for_status()
+        data = resp.json()
+
+    if "error" in data:
+        return JSONResponse(status_code=400, content={"error": data["error"], "convex_error": True})
+
+    return data.get("value", data)
+
+
+@app.delete("/certifications/{cert_id}")
+async def delete_certification(cert_id: str) -> Any:
+    """Delete a certification."""
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            f"{CONVEX_URL}/api/mutation",
+            json={
+                "path": "certifications:deleteCertification",
+                "args": {"id": cert_id},
+                "format": "json",
+            },
+        )
+        resp.raise_for_status()
+        data = resp.json()
+
+    if "error" in data:
+        return JSONResponse(status_code=400, content={"error": data["error"], "convex_error": True})
+
+    return data.get("value", {"success": True})
+
+
+# ---------------------------------------------------------
+# Config Endpoint (for frontend)
+# ---------------------------------------------------------
+
+
+@app.get("/config")
+async def get_config() -> dict:
+    """Get configuration for the frontend."""
+    return {
+        "name_surname": os.getenv("NAME_SURNAME", "Diver"),
+        "convex_url": CONVEX_URL,
+        "profile_photo": os.getenv("PROFILE_PHOTO", ""),
+    }
+
+
+@app.get("/profile-photo")
+async def get_profile_photo() -> Response:
+    """Serve the profile photo from the assets folder."""
+    from pathlib import Path
+
+    photo_filename = os.getenv("PROFILE_PHOTO", "")
+    if not photo_filename:
+        return JSONResponse(status_code=404, content={"error": "No profile photo configured"})
+
+    # Look for the photo in assets folder
+    photo_path = Path("assets") / photo_filename
+    if not photo_path.exists():
+        return JSONResponse(status_code=404, content={"error": f"Photo not found: {photo_filename}"})
+
+    # Determine content type
+    ext = photo_path.suffix.lower()
+    content_types = {
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".png": "image/png",
+        ".bmp": "image/bmp",
+    }
+    content_type = content_types.get(ext, "image/jpeg")
+
+    with open(photo_path, "rb") as f:
+        photo_bytes = f.read()
+
+    return Response(
+        content=photo_bytes,
+        media_type=content_type,
+        headers={"Content-Disposition": f'inline; filename="{photo_filename}"'},
+    )
+
+
+@app.post("/login")
+async def login(request: LoginRequest) -> Any:
+    """Validate login password."""
+    stored_password = os.getenv("PROFILE_PASSWORD", "")
+    if request.password == stored_password:
+        return {"success": True}
+    return JSONResponse(status_code=401, content={"error": "Invalid password"})
 
 
 # ---------------------------------------------------------

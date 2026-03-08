@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Divelog</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Login Overlay -->
+    <div id="login-overlay" class="login-overlay">
+        <div class="login-card">
+            <h2>Divelog</h2>
+            <p>Enter password to continue</p>
+            <form onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <input type="password" id="password-input" placeholder="Password" required>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Login</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main App (hidden until login) -->
+    <div id="main-app" class="app-container" style="display: none;">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1 class="logo">Divelog <span id="user-name"></span></h1>
+                <nav class="nav">
+                    <button class="nav-btn active" data-view="home">Home</button>
+                    <button class="nav-btn" data-view="dives">Past Dives</button>
+                    <button class="nav-btn" data-view="certifications">Certifications</button>
+                </nav>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Home View - Latest Dive -->
+            <section id="home-view" class="view active">
+                <!-- Profile Section -->
+                <div class="profile-section">
+                    <img id="profile-photo" class="profile-photo" src="" alt="Profile Photo">
+                    <div class="profile-info">
+                        <h2 id="profile-name" class="profile-name"></h2>
+                        <div id="dive-stats" class="dive-stats">
+                            <span id="total-dives">0 dives</span>
+                        </div>
+                    </div>
+                </div>
+
+                <h2 class="section-title">Latest Dive</h2>
+                <div id="latest-dive-container">
+                    <div class="loading">Loading latest dive...</div>
+                </div>
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="showAddDiveModal()">Log New Dive</button>
+                </div>
+            </section>
+
+            <!-- Past Dives View -->
+            <section id="dives-view" class="view">
+                <h2 class="section-title">Past Dives</h2>
+                <div id="dives-list" class="dives-grid">
+                    <div class="loading">Loading dives...</div>
+                </div>
+            </section>
+
+            <!-- Certifications View -->
+            <section id="certifications-view" class="view">
+                <h2 class="section-title">Certifications</h2>
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="showAddCertModal()">Add Certification</button>
+                </div>
+                <div id="certifications-list" class="certifications-grid">
+                    <div class="loading">Loading certifications...</div>
+                </div>
+            </section>
+        </main>
+    </div>
+    <!-- End of main-app -->
+
+    <!-- Add/Edit Dive Modal -->
+    <div id="dive-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="dive-modal-title">Log New Dive</h3>
+                <button class="close-btn" onclick="closeDiveModal()">&times;</button>
+            </div>
+            <form id="dive-form" onsubmit="submitDive(event)">
+                <input type="hidden" id="dive-id" value="">
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="dive-number">Dive Number *</label>
+                        <input type="number" id="dive-number" required min="1">
+                    </div>
+                    <div class="form-group">
+                        <label for="dive-date">Date *</label>
+                        <input type="date" id="dive-date" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="dive-location">Location *</label>
+                        <input type="text" id="dive-location" required placeholder="e.g., Portofino, Italy">
+                    </div>
+                    <div class="form-group">
+                        <label for="dive-site">Dive Site</label>
+                        <input type="text" id="dive-site" placeholder="e.g., Cristo d'Abisso">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="dive-duration">Duration (min) *</label>
+                        <input type="number" id="dive-duration" required min="1" step="1">
+                    </div>
+                    <div class="form-group">
+                        <label for="dive-max-depth">Max Depth (m) *</label>
+                        <input type="number" id="dive-max-depth" required min="0" step="0.1">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="dive-temperature">Temperature (C)</label>
+                        <input type="number" id="dive-temperature" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label for="dive-visibility">Visibility (m)</label>
+                        <input type="number" id="dive-visibility" min="0" step="1">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="dive-weather">Weather</label>
+                        <input type="text" id="dive-weather" placeholder="e.g., Sunny">
+                    </div>
+                    <div class="form-group">
+                        <label for="dive-suit">Suit Thickness (mm)</label>
+                        <input type="number" id="dive-suit" min="0" step="0.5">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="dive-weights">Lead Weights (kg)</label>
+                        <input type="number" id="dive-weights" min="0" step="0.5">
+                    </div>
+                    <div class="form-group">
+                        <label for="dive-club">Club Name *</label>
+                        <input type="text" id="dive-club" required placeholder="e.g., Portofino Divers">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="dive-instructor">Instructor Name *</label>
+                    <input type="text" id="dive-instructor" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="dive-notes">Notes</label>
+                    <textarea id="dive-notes" rows="3" placeholder="Dive notes, observations..."></textarea>
+                </div>
+
+                <div class="form-row checkbox-row">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="dive-buddy-check" checked>
+                        Buddy Check
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="dive-briefed" checked>
+                        Briefed
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label for="dive-photos">Photos</label>
+                    <input type="file" id="dive-photos" multiple accept="image/png,image/jpeg,image/bmp">
+                    <small>Upload dive photos (PNG, JPEG, BMP)</small>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeDiveModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="dive-submit-btn">Save Dive</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Certification Modal -->
+    <div id="cert-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add Certification</h3>
+                <button class="close-btn" onclick="closeCertModal()">&times;</button>
+            </div>
+            <form id="cert-form" onsubmit="submitCertification(event)">
+                <div class="form-group">
+                    <label for="cert-name">Certification Name *</label>
+                    <input type="text" id="cert-name" required placeholder="e.g., Open Water Diver">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="cert-agency">Agency *</label>
+                        <select id="cert-agency" required>
+                            <option value="">Select agency</option>
+                            <option value="PADI">PADI</option>
+                            <option value="SSI">SSI</option>
+                            <option value="CMAS">CMAS</option>
+                            <option value="NAUI">NAUI</option>
+                            <option value="BSAC">BSAC</option>
+                            <option value="SDI/TDI">SDI/TDI</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="cert-date">Date *</label>
+                        <input type="date" id="cert-date" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="cert-number">Certification Number</label>
+                    <input type="text" id="cert-number" placeholder="e.g., 12345678">
+                </div>
+
+                <div class="form-group">
+                    <label for="cert-instructor">Instructor Name</label>
+                    <input type="text" id="cert-instructor">
+                </div>
+
+                <div class="form-group">
+                    <label for="cert-center">Dive Center</label>
+                    <input type="text" id="cert-center">
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeCertModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Certification</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Confirm Delete Modal -->
+    <div id="confirm-modal" class="modal">
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h3>Confirm Delete</h3>
+                <button class="close-btn" onclick="closeConfirmModal()">&times;</button>
+            </div>
+            <p id="confirm-message">Are you sure you want to delete this item?</p>
+            <div class="form-actions">
+                <button class="btn btn-secondary" onclick="closeConfirmModal()">Cancel</button>
+                <button class="btn btn-danger" id="confirm-delete-btn">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
