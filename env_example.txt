@@ -1,0 +1,22 @@
+# Deployment used by `npx convex dev`
+# Convex Configuration
+CONVEX_DEPLOYMENT= # team: xxxx, project: scubalogs
+CONVEX_URL= 
+# CONVEX_URL = your_url uv run pytest tests/test_dive_upsert.py -k real_convex -v -s
+
+# Deployment used by `npx convex dev`
+CONVEX_DEPLOYMENT=
+
+#NEXT_PUBLIC_CONVEX_URL=https://acoustic-poodle-12.convex.cloud
+
+# Geoapify API key for maps and geocoding
+# Get your free API key at: https://www.geoapify.com/
+NEXT_PUBLIC_GEOAPIFY_API_KEY=
+
+
+# API Keys
+NEXT_PUBLIC_API_URL=
+
+FISHAL_API_KEY = 
+
+FISHAL_API_ID = 

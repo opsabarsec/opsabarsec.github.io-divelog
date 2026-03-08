@@ -9,6 +9,7 @@ import uvicorn
 # Service imports
 from app.services.geolocation import get_coordinates_async
 from app.services.search_club_website import search_club_website
+from app.services.fish_finder import identify_fish
 from dotenv import load_dotenv
 # app/main.py (or wherever your FastAPI app lives)
 
@@ -33,7 +34,7 @@ class Dive(BaseModel):
     max_depth: float
     club_name: str
     instructor_name: str
-    photo_storage_id: str  # REQUIRED - now comes from `/upload-photo`
+    photo_storage_ids: list[str]  # REQUIRED - list of IDs from `/upload-photos`
 
     latitude: Optional[float] = None
     longitude: Optional[float] = None
@@ -114,9 +115,9 @@ async def upload_photo(file: UploadFile = File(...)) -> dict[str, str] | JSONRes
     # STEP 2
     try:
         async with httpx.AsyncClient() as client:
-            upload_headers = {"Content-Type": file.content_type}
+            content_type: str = file.content_type or "application/octet-stream"
             upload_resp = await client.post(
-                signed_url, headers=upload_headers, content=file_bytes
+                signed_url, headers={"Content-Type": content_type}, content=file_bytes
             )  # ✅ POST
             upload_resp.raise_for_status()
 
@@ -130,6 +131,84 @@ async def upload_photo(file: UploadFile = File(...)) -> dict[str, str] | JSONRes
         return JSONResponse(status_code=500, content={"error": f"Upload failed: {str(e)}"})
 
     return {"photo_storage_id": storage_id}
+
+
+@app.post("/upload-photos", response_model=None)
+async def upload_photos(files: list[UploadFile] = File(...)) -> dict[str, list[str]] | JSONResponse:
+    """
+    Upload multiple photos to Convex storage.
+
+    Input:
+        files: List of image files (PNG, JPEG, BMP)
+
+    Output:
+        - {"photo_storage_ids": ["id1", "id2", ...]} on success
+        - JSONResponse with error details on failure
+    """
+    allowed = {"image/png", "image/jpeg", "image/bmp"}
+    storage_ids: list[str] = []
+
+    for file in files:
+        if file.content_type not in allowed:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "error": f"Unsupported file type: {file.content_type} for file {file.filename}"
+                },
+            )
+
+    for file in files:
+        file_bytes = await file.read()
+
+        # STEP 1: Get signed upload URL
+        try:
+            async with httpx.AsyncClient() as client:
+                headers = {"Content-Type": "application/json"}
+                if CONVEX_AUTH_TOKEN:
+                    headers["Authorization"] = f"Bearer {CONVEX_AUTH_TOKEN}"
+
+                url_resp = await client.post(
+                    f"{CONVEX_URL}/api/run/files.js/generateUploadUrl",
+                    headers=headers,
+                    json={"args": {}, "format": "json"},
+                )
+                url_resp.raise_for_status()
+
+                result = url_resp.json()
+                signed_url = result.get("value")
+                if not signed_url or not isinstance(signed_url, str):
+                    return JSONResponse(
+                        status_code=500, content={"error": f"Invalid URL: {result}"}
+                    )
+        except Exception as e:
+            return JSONResponse(status_code=500, content={"error": f"Mutation failed: {str(e)}"})
+
+        # STEP 2: Upload file to signed URL
+        try:
+            async with httpx.AsyncClient() as client:
+                content_type: str = file.content_type or "application/octet-stream"
+                upload_resp = await client.post(
+                    signed_url, headers={"Content-Type": content_type}, content=file_bytes
+                )
+                upload_resp.raise_for_status()
+
+                result = upload_resp.json()
+                storage_id = result.get("storageId")
+                if not storage_id:
+                    return JSONResponse(
+                        status_code=500,
+                        content={
+                            "error": f"No storageId for file {file.filename}",
+                            "result": result,
+                        },
+                    )
+                storage_ids.append(storage_id)
+        except Exception as e:
+            return JSONResponse(
+                status_code=500, content={"error": f"Upload failed for {file.filename}: {str(e)}"}
+            )
+
+    return {"photo_storage_ids": storage_ids}
 
 
 # ---------------------------------------------------------
@@ -190,6 +269,51 @@ async def download_photo(storage_id: str) -> Response | JSONResponse:
             "Content-Disposition": f'inline; filename="{storage_id}"',
         },
     )
+
+
+# ---------------------------------------------------------
+# Fish Identification
+# ---------------------------------------------------------
+
+
+@app.post("/identify-fish", response_model=None)
+async def identify_fish_endpoint(file: UploadFile = File(...)) -> dict | JSONResponse:
+    """
+    Identify fish species in an uploaded image using Fishial AI.
+
+    Input:
+        file: Image file (PNG, JPEG, BMP)
+
+    Output:
+        - {"success": true, "species": [{"name": "...", "accuracy": 0.95}, ...]}
+        - JSONResponse with error details on failure
+    """
+    allowed = {"image/png", "image/jpeg", "image/bmp"}
+    if file.content_type not in allowed:
+        return JSONResponse(
+            status_code=400, content={"error": f"Unsupported file type: {file.content_type}"}
+        )
+
+    file_bytes = await file.read()
+    filename = file.filename or "image.jpg"
+    content_type = file.content_type or "image/jpeg"
+
+    result = await identify_fish(
+        image_data=file_bytes,
+        filename=filename,
+        content_type=content_type,
+    )
+
+    if not result.success:
+        return JSONResponse(status_code=500, content={"success": False, "error": result.error})
+
+    return {
+        "success": True,
+        "species": [
+            {"name": s.name, "accuracy": s.accuracy, "fishangler_id": s.fishangler_id}
+            for s in result.species
+        ],
+    }
 
 
 @app.post("/resolve-dive-metadata", response_model=ResolveMetadataResponse)
@@ -260,7 +384,7 @@ async def upsert_dive(dive: Dive) -> Any:
         lat, lon = dive.latitude, dive.longitude
         dive.osm_link = f"https://www.openstreetmap.org/?mlat={lat}&mlon={lon}#map=16/{lat}/{lon}"
 
-    payload = dive.model_dump(by_alias=True)
+    payload = dive.model_dump(by_alias=True, exclude_none=True)
 
     async with httpx.AsyncClient() as client:
         resp = await client.post(

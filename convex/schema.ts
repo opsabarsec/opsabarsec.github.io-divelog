@@ -26,7 +26,7 @@ const schema = defineSchema({
     // REQUIRED fields (matched to Python + upsertDive)
     club_name: v.string(),
     instructor_name: v.string(),
-    photo_storage_id: v.string(),
+    photo_storage_ids: v.array(v.string()),
     club_website: v.optional(v.string()),
     notes: v.optional(v.string()),
 

@@ -10,7 +10,10 @@
       "Bash(uv pip install:*)",
       "Bash(npm run build:*)",
       "Bash(npx convex:*)",
-      "Bash(uv run python:*)"
+      "Bash(uv run python:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(gh api:*)",
+      "Bash(curl:*)"
     ]
   }
 }

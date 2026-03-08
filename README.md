@@ -45,14 +45,36 @@ The endpoint `/search-club` searches the internet for the official website of a 
 
 Upload dive photos as proof of your dive—a digital replacement for the traditional stamp in paper logbooks. Photos are stored in Convex's built-in file storage and linked to dive records.
 
-*   **POST `/upload-photo`** — Upload an image (JPEG, PNG, BMP) and receive a `photo_storage_id`
+*   **POST `/upload-photo`** — Upload a single image (JPEG, PNG, BMP) and receive a `photo_storage_id`
+*   **POST `/upload-photos`** — Upload multiple images and receive a list of `photo_storage_ids`
 *   **GET `/download-photo/{storage_id}`** — Retrieve a stored photo by its storage ID
-*   The `photo_storage_id` is a **required field** when creating/updating dives via `/dives/upsert`
+*   The `photo_storage_ids` array is a **required field** when creating/updating dives via `/dives/upsert`
 
 **Workflow:**
-1.  Upload a photo via `/upload-photo`
-2.  Receive the `photo_storage_id` in the response
-3.  Include this ID when submitting the dive record
+1.  Upload photos via `/upload-photo` or `/upload-photos`
+2.  Receive the `photo_storage_ids` in the response
+3.  Include this array when submitting the dive record
+
+### 🐟 **Fish Identification (Fishial AI)**
+
+Identify fish species from your dive photos using the [Fishial Recognition API](https://fishial.ai/). Upload an image and get back the scientific name and accuracy of identified species.
+
+*   **POST `/identify-fish`** — Upload an image and receive species identification results
+*   Returns species names (scientific nomenclature) with confidence scores
+*   Supports JPEG, PNG, and BMP images
+
+**Example Response:**
+```json
+{
+  "success": true,
+  "species": [
+    {"name": "Triaenodon obesus", "accuracy": 0.965, "fishangler_id": "..."},
+    {"name": "Carcharhinus amblyrhynchos", "accuracy": 0.02, "fishangler_id": "..."}
+  ]
+}
+```
+
+**Use Case:** Add identified species to your dive notes for a complete record of marine life encountered during the dive.
 
 ### 🔗 **Combined Metadata Resolver**
 
@@ -83,7 +105,8 @@ Perfect for auto‑filling frontend die log forms.
      ├── main.py                       # FastAPI app & endpoints (incl. photo upload/download)
      └── services/
            ├── geolocation.py          # async geocoder + caching + OSM link builder
-           └── search_club_website.py  # dive club website scraper
+           ├── search_club_website.py  # dive club website scraper
+           └── fish_finder.py          # Fishial AI integration for fish identification
     convex/
      ├── schema.ts                     # Convex schema (dives table with photo_storage_id)
      ├── dives.ts                      # Convex mutations & queries
@@ -129,10 +152,15 @@ Create a `.env` file in the project root:
 ```env
 CONVEX_URL=https://<your-convex-deployment>.convex.cloud
 MY_EMAIL=you@example.com
+
+# Fishial API (for fish identification)
+FISHAL_API_ID=your_api_id
+FISHAL_API_KEY=your_api_key
 ```
 
 *   `MY_EMAIL` is used for Nominatim User‑Agent compliance
 *   `CONVEX_URL` points to your Convex instance
+*   `FISHAL_API_ID` and `FISHAL_API_KEY` are your [Fishial API](https://fishial.ai/) credentials for fish identification
 
 ***
 
@@ -156,17 +184,33 @@ Run integration tests with real Convex:
 CONVEX_URL=https://friendly-finch-619.convex.cloud uv run pytest -k real_convex -v -s
 ```
 
+Run fish identification integration test (requires Fishial API credentials):
+
+```bash
+uv run pytest tests/test_dive_upsert.py::test_fish_identification_shark_in_dive_notes -v -s
+```
+
+This test uploads `assets/shark.jpg`, identifies the species via Fishial AI, creates a dive entry with the identified species in the notes, and verifies "shark" appears in the retrieved dive notes.
+
 ***
 
 ## 📡 API Endpoints Overview
 
 ### **POST /upload-photo**
 
-Upload a dive photo (JPEG, PNG, BMP). Returns `{ "photo_storage_id": "..." }`.
+Upload a single dive photo (JPEG, PNG, BMP). Returns `{ "photo_storage_id": "..." }`.
+
+### **POST /upload-photos**
+
+Upload multiple dive photos. Returns `{ "photo_storage_ids": ["id1", "id2", ...] }`.
 
 ### **GET /download-photo/{storage_id}**
 
 Download a stored photo by its Convex storage ID.
+
+### **POST /identify-fish**
+
+Identify fish species in an image using Fishial AI. Returns species names with accuracy scores.
 
 ### **POST /resolve-dive-metadata**
 
@@ -174,11 +218,11 @@ Returns coordinates, OSM link, and website for a given location & club.
 
 ### **POST /dives/upsert**
 
-Creates or updates a dive record in Convex. Requires `photo_storage_id` from `/upload-photo`.
+Creates or updates a dive record in Convex. Requires `photo_storage_ids` array from `/upload-photos`.
 
 ### **GET /dives/{id}**
 
-Retrieves a stored dive (includes photo_storage_id for fetching the photo).
+Retrieves a stored dive (includes photo_storage_ids for fetching the photos).
 
 ### **GET /search-club?q=Club Name**
 
@@ -210,12 +254,13 @@ Dive schema includes:
 *   Optional attributes (notes, site, temperature, etc.)
 *   Auto-updated fields: `logged_at`, `updated_at`
 *   `osm_link` for map visualization
-*   `photo_storage_id` (required) — links to Convex file storage
+*   `photo_storage_ids` (required) — array of Convex file storage IDs for multiple photos
 
 **File Storage:**
 *   Photos are stored in Convex's built-in file storage
 *   `files.ts` exposes a `generateUploadUrl` mutation for secure uploads
 *   Storage IDs are stable references to uploaded files
+*   Multiple photos can be attached to a single dive entry
 
 Convex table is typed and indexed via `schema.ts` and `dives.ts`.
 

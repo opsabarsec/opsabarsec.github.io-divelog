@@ -8,7 +8,7 @@ import argparse
 import re
 import sys
 from urllib.parse import unquote, urlparse
-from typing import Dict, Optional, Tuple, Any
+from typing import Dict, Any
 
 import httpx
 

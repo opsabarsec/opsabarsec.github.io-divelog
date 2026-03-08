@@ -47,7 +47,7 @@ def valid_dive_data() -> Dict[str, Any]:
         "club_website": "https://portofinodivers.com",
         "instructor_name": "Marco Rossi",
         "notes": "Amazing dive",
-        "photo_storage_id": "photo_123",
+        "photo_storage_ids": ["photo_123"],
         "buddy_check": True,
         "briefed": True,
     }
@@ -64,7 +64,7 @@ def minimal_dive_data() -> Dict[str, Any]:
         "max_depth": 15.0,
         "club_name": "Red Sea Divers",
         "instructor_name": "Ahmed Hassan",
-        "photo_storage_id": "photo_456",
+        "photo_storage_ids": ["photo_456"],
     }
 
 
@@ -157,7 +157,7 @@ def test_upsert_dive_invalid_types() -> None:
         "max_depth": "not-a-float",  # Should be float
         "club_name": "Test Dive Club",
         "instructor_name": "Test Instructor",
-        "photo_storage_id": "photo_test",
+        "photo_storage_ids": ["photo_test"],
         "logged_at": int(time.time() * 1000),
         "updated_at": int(time.time() * 1000),
     }
@@ -178,7 +178,7 @@ def test_upsert_dive_empty_arrays() -> None:
         "max_depth": 15.0,
         "club_name": "Test Dive Club",
         "instructor_name": "Test Instructor",
-        "photo_storage_id": "photo_test",
+        "photo_storage_ids": ["photo_test"],
     }
 
     with patch("httpx.AsyncClient") as mock_client:
@@ -242,7 +242,7 @@ def test_post_and_retrieve_dive() -> None:
         "club_website": "https://cairnsdive.com",
         "instructor_name": "Steve Irwin Jr",
         "notes": "Amazing dive with giant potato cod!",
-        "photo_storage_id": "photo_001_gbr",
+        "photo_storage_ids": ["photo_001_gbr"],
         "buddy_check": True,
         "briefed": True,
     }
@@ -378,7 +378,7 @@ def test_post_and_retrieve_dive_real_convex() -> None:
         "club_website": "https://cairnsdive.com",
         "instructor_name": "Steve Irwin Jr",
         "notes": "Integration test dive - Amazing dive with giant potato cod!",
-        "photo_storage_id": "photo_integration_001_gbr",
+        "photo_storage_ids": ["photo_integration_001_gbr"],
         "buddy_check": True,
         "briefed": True,
     }
@@ -417,7 +417,7 @@ def test_post_and_retrieve_dive_real_convex() -> None:
     assert retrieved_data["club_website"] == dive_data["club_website"]
     assert retrieved_data["instructor_name"] == dive_data["instructor_name"]
     assert retrieved_data["notes"] == dive_data["notes"]
-    assert retrieved_data["photo_storage_id"] == dive_data["photo_storage_id"]
+    assert retrieved_data["photo_storage_ids"] == dive_data["photo_storage_ids"]
     # Note: Convex stores these with PascalCase field names
     assert retrieved_data["Buddy_check"] == dive_data["buddy_check"]
     assert retrieved_data["Briefed"] == dive_data["briefed"]
@@ -434,7 +434,122 @@ def test_post_and_retrieve_dive_real_convex() -> None:
     print(f"Max depth: {retrieved_data['max_depth']}m")
 
 
-# commands for teh integration test:
+# INTEGRATION TEST - Fish Identification
+@pytest.mark.skipif(
+    os.environ.get("CONVEX_URL", "").startswith("https://test")
+    or not os.environ.get("FISHAL_API_ID")
+    or not os.environ.get("FISHAL_API_KEY"),
+    reason="Requires real Convex deployment and Fishial API credentials",
+)
+def test_fish_identification_shark_in_dive_notes() -> None:
+    """
+    Integration test: Identify fish from shark.jpg and create a dive with species in notes.
+
+    This test:
+    1. Uploads assets/shark.jpg to /identify-fish endpoint
+    2. Verifies a shark species is identified
+    3. Creates a dive entry with observed species in the notes
+    4. Retrieves the dive and verifies 'shark' appears in the notes
+
+    Run with:
+    uv run pytest tests/test_dive_upsert.py::test_fish_identification_shark_in_dive_notes -v -s
+    """
+    # Step 1: Load the shark image
+    shark_image_path = Path(__file__).parent.parent / "assets" / "shark.jpg"
+    assert shark_image_path.exists(), f"Shark image not found at {shark_image_path}"
+
+    with open(shark_image_path, "rb") as f:
+        image_data = f.read()
+
+    # Step 2: Identify the fish using the API
+    identify_response = client.post(
+        "/identify-fish",
+        files={"file": ("shark.jpg", image_data, "image/jpeg")},
+    )
+
+    assert identify_response.status_code == 200, f"Fish identification failed: {identify_response.text}"
+    identify_result = identify_response.json()
+    assert identify_result["success"], f"Fish identification unsuccessful: {identify_result}"
+    assert len(identify_result["species"]) > 0, "No species identified"
+
+    # Get the top identified species
+    top_species = identify_result["species"][0]
+    species_name = top_species["name"]
+    accuracy = top_species["accuracy"]
+    print(f"\nIdentified species: {species_name} (accuracy: {accuracy:.1%})")
+
+    # Known shark genera/species (scientific names)
+    shark_indicators = [
+        "carcharhinus",  # Bull shark, reef sharks, etc.
+        "galeocerdo",    # Tiger shark
+        "triaenodon",    # Whitetip reef shark
+        "carcharodon",   # Great white shark
+        "sphyrna",       # Hammerhead sharks
+        "negaprion",     # Lemon shark
+        "ginglymostoma", # Nurse shark
+        "rhincodon",     # Whale shark
+        "isurus",        # Mako shark
+        "prionace",      # Blue shark
+        "shark",         # Common name fallback
+    ]
+
+    # Verify the identified species is a shark
+    is_shark = any(indicator in species_name.lower() for indicator in shark_indicators)
+    assert is_shark, f"Expected a shark species but got: {species_name}"
+
+    # Step 3: Create dive entry with observed species in notes
+    # Include both scientific name and "shark" for readability
+    observed_species_note = f"Observed species: {species_name} (shark)"
+    dive_data = {
+        "user_id": "test-user-fish-001",
+        "dive_number": 100,
+        "dive_date": int(time.time() * 1000),
+        "location": "Bahamas, Tiger Beach",
+        "latitude": 26.8667,
+        "longitude": -79.0167,
+        "site": "Tiger Beach",
+        "duration": 45.0,
+        "max_depth": 12.0,
+        "temperature": 25.0,
+        "visibility": 25.0,
+        "weather": "sunny",
+        "suit_thickness": 3.0,
+        "lead_weights": 4.0,
+        "club_name": "Bahamas Shark Diving",
+        "instructor_name": "Jim Abernethy",
+        "notes": observed_species_note,
+        "photo_storage_ids": ["shark_photo_001"],
+        "buddy_check": True,
+        "briefed": True,
+    }
+
+    # Step 4: POST the dive
+    post_response = client.post("/dives/upsert", json=dive_data)
+    assert post_response.status_code == 200, f"Dive upsert failed: {post_response.text}"
+
+    response_data = post_response.json()
+    assert "id" in response_data
+    dive_id = response_data["id"]
+    print(f"Created dive with ID: {dive_id}")
+
+    # Step 5: GET the dive and verify notes contain 'shark'
+    get_response = client.get(f"/dives/{dive_id}")
+    assert get_response.status_code == 200, f"Failed to retrieve dive: {get_response.text}"
+
+    retrieved_dive = get_response.json()
+    notes = retrieved_dive.get("notes", "")
+
+    # Assert that 'shark' appears in the notes (case-insensitive)
+    assert "shark" in notes.lower(), (
+        f"Expected 'shark' in notes but got: '{notes}'. "
+        f"Identified species was: {species_name}"
+    )
+
+    print(f"Dive notes: {notes}")
+    print("Successfully verified shark identification in dive notes!")
+
+
+# commands for the integration tests:
 
 # Windows Command Prompt (cmd):
 # set CONVEX_URL=https://friendly-finch-619.convex.cloud && uv run pytest tests/test_dive_upsert.py::test_post_and_retrieve_dive_real_convex -v -s
@@ -444,3 +559,6 @@ def test_post_and_retrieve_dive_real_convex() -> None:
 
 # Git Bash / Linux / macOS:
 # CONVEX_URL=https://friendly-finch-619.convex.cloud uv run pytest tests/test_dive_upsert.py::test_post_and_retrieve_dive_real_convex -v -s
+
+# Fish identification test:
+# uv run pytest tests/test_dive_upsert.py::test_fish_identification_shark_in_dive_notes -v -s
