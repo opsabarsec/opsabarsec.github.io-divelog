@@ -93,6 +93,16 @@ class ResolveMetadataResponse(BaseModel):
 
 
 # ---------------------------------------------------------
+# Root / health check
+# ---------------------------------------------------------
+
+
+@app.get("/")
+async def root() -> dict:
+    return {"status": "ok", "service": "dive-log-api"}
+
+
+# ---------------------------------------------------------
 # File upload: Upload a photo to Convex storage
 # ---------------------------------------------------------
 
