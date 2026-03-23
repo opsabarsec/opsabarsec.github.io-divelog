@@ -1,6 +1,7 @@
 from typing import Optional, Any, cast
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import httpx
 import os
@@ -10,6 +11,17 @@ from dotenv import load_dotenv
 load_dotenv(".env")
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://opsabarsec.github.io",
+        "https://opsabarsec.github.io/opsabarsec.github.io-divelog",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 CONVEX_URL = os.environ["CONVEX_URL"]
 

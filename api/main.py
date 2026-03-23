@@ -21,7 +21,10 @@ app = FastAPI()
 # CORS middleware for frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://opsabarsec.github.io",
+        "https://opsabarsec.github.io/opsabarsec.github.io-divelog",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
