@@ -66,19 +66,28 @@
 
         <!-- Dives View -->
         <div id="dives-view" class="view">
-          <h2 class="section-title">My Dives</h2>
+          <div class="section-header">
+            <h2 class="section-title">My Dives</h2>
+            <button class="btn btn-primary btn-sm" onclick="showAddDiveModal()">+ Add</button>
+          </div>
           <div id="dives-list" class="dives-grid"></div>
         </div>
 
         <!-- Certifications View -->
         <div id="certifications-view" class="view">
-          <h2 class="section-title">Certifications</h2>
+          <div class="section-header">
+            <h2 class="section-title">Certifications</h2>
+            <button class="btn btn-primary btn-sm" onclick="showAddCertModal()">+ Add</button>
+          </div>
           <div id="certifications-list" class="certifications-grid"></div>
         </div>
 
         <!-- Checklists View -->
         <div id="checklists-view" class="view">
-          <h2 class="section-title">Checklists</h2>
+          <div class="section-header">
+            <h2 class="section-title">Checklists</h2>
+            <button class="btn btn-primary btn-sm" onclick="showAddChecklistModal()">+ Add</button>
+          </div>
           <div id="checklists-list"></div>
         </div>
 
@@ -101,6 +110,152 @@
           <button id="confirm-delete-btn" class="btn btn-danger">Delete</button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Add Dive Modal -->
+  <div id="add-dive-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Log New Dive</h3>
+        <button class="close-btn" onclick="closeAddDiveModal()">&times;</button>
+      </div>
+      <form onsubmit="submitNewDive(event)">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Dive Number <span class="required">*</span></label>
+            <input type="number" id="dive-number" min="1" required>
+          </div>
+          <div class="form-group">
+            <label>Date <span class="required">*</span></label>
+            <input type="date" id="dive-date" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Location <span class="required">*</span></label>
+          <input type="text" id="dive-location" placeholder="e.g. Red Sea, Egypt" required>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Max Depth (m) <span class="required">*</span></label>
+            <input type="number" id="dive-depth" step="0.1" min="0" required>
+          </div>
+          <div class="form-group">
+            <label>Duration (min) <span class="required">*</span></label>
+            <input type="number" id="dive-duration" step="1" min="1" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Club <span class="required">*</span></label>
+            <input type="text" id="dive-club" required>
+          </div>
+          <div class="form-group">
+            <label>Instructor <span class="required">*</span></label>
+            <input type="text" id="dive-instructor" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Site</label>
+            <input type="text" id="dive-site" placeholder="e.g. Blue Hole">
+          </div>
+          <div class="form-group">
+            <label>Temperature (°C)</label>
+            <input type="number" id="dive-temp" step="0.1">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Suit Thickness (mm)</label>
+            <input type="number" id="dive-suit" step="0.5" min="0">
+          </div>
+          <div class="form-group">
+            <label>Weights (kg)</label>
+            <input type="number" id="dive-weights" step="0.5" min="0">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Comments</label>
+          <textarea id="dive-notes" rows="3" placeholder="Any notes about the dive..."></textarea>
+        </div>
+        <div class="checkbox-row">
+          <label class="checkbox-label"><input type="checkbox" id="dive-buddy-check" checked> Buddy Check</label>
+          <label class="checkbox-label"><input type="checkbox" id="dive-briefed" checked> Briefed</label>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeAddDiveModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Dive</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Certification Modal -->
+  <div id="add-cert-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Add Certification</h3>
+        <button class="close-btn" onclick="closeAddCertModal()">&times;</button>
+      </div>
+      <form onsubmit="submitNewCert(event)">
+        <div class="form-group">
+          <label>Certification Name <span class="required">*</span></label>
+          <input type="text" id="cert-name" placeholder="e.g. Open Water Diver" required>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Agency <span class="required">*</span></label>
+            <input type="text" id="cert-agency" placeholder="e.g. PADI, SSI" required>
+          </div>
+          <div class="form-group">
+            <label>Date <span class="required">*</span></label>
+            <input type="date" id="cert-date" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Certification Number</label>
+            <input type="text" id="cert-number">
+          </div>
+          <div class="form-group">
+            <label>Instructor</label>
+            <input type="text" id="cert-instructor">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Dive Center</label>
+          <input type="text" id="cert-center">
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeAddCertModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Certification</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Checklist Modal -->
+  <div id="add-checklist-modal" class="modal">
+    <div class="modal-content modal-small">
+      <div class="modal-header">
+        <h3>Add Checklist</h3>
+        <button class="close-btn" onclick="closeAddChecklistModal()">&times;</button>
+      </div>
+      <form onsubmit="submitNewChecklist(event)">
+        <div class="form-group">
+          <label>Name <span class="required">*</span></label>
+          <input type="text" id="checklist-name" placeholder="e.g. Travel Checklist" required>
+        </div>
+        <div class="form-group">
+          <label>Google Doc / Sheet Link <span class="required">*</span></label>
+          <input type="url" id="checklist-link" placeholder="https://docs.google.com/..." required>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeAddChecklistModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Checklist</button>
+        </div>
+      </form>
     </div>
   </div>
 

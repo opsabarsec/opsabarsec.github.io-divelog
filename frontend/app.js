@@ -322,6 +322,137 @@ function renderChecklistItem(item) {
 }
 
 /* -------------------------------------------------
+   ADD DIVE MODAL
+--------------------------------------------------*/
+function showAddDiveModal() {
+  document.getElementById('add-dive-modal').classList.add('active');
+}
+function closeAddDiveModal() {
+  document.getElementById('add-dive-modal').classList.remove('active');
+  document.getElementById('add-dive-modal').querySelector('form').reset();
+}
+
+async function submitNewDive(event) {
+  event.preventDefault();
+  const dateVal = document.getElementById('dive-date').value;
+  const payload = {
+    user_id: USER_ID,
+    dive_number: parseInt(document.getElementById('dive-number').value),
+    dive_date: new Date(dateVal).getTime(),
+    location: document.getElementById('dive-location').value.trim(),
+    max_depth: parseFloat(document.getElementById('dive-depth').value),
+    duration: parseFloat(document.getElementById('dive-duration').value),
+    club_name: document.getElementById('dive-club').value.trim(),
+    instructor_name: document.getElementById('dive-instructor').value.trim(),
+    photo_storage_ids: [],
+    buddy_check: document.getElementById('dive-buddy-check').checked,
+    briefed: document.getElementById('dive-briefed').checked,
+  };
+  const site = document.getElementById('dive-site').value.trim();
+  if (site) payload.site = site;
+  const temp = document.getElementById('dive-temp').value;
+  if (temp !== '') payload.temperature = parseFloat(temp);
+  const suit = document.getElementById('dive-suit').value;
+  if (suit !== '') payload.suit_thickness = parseFloat(suit);
+  const weights = document.getElementById('dive-weights').value;
+  if (weights !== '') payload.lead_weights = parseFloat(weights);
+  const notes = document.getElementById('dive-notes').value.trim();
+  if (notes) payload.notes = notes;
+
+  try {
+    const resp = await fetch(`${DIVES_API}/dives/upsert`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!resp.ok) throw new Error(await resp.text());
+    showToast('Dive saved!');
+    closeAddDiveModal();
+    loadAllDives();
+  } catch (err) {
+    showToast('Failed to save dive', 'error');
+    console.error(err);
+  }
+}
+
+/* -------------------------------------------------
+   ADD CERTIFICATION MODAL
+--------------------------------------------------*/
+function showAddCertModal() {
+  document.getElementById('add-cert-modal').classList.add('active');
+}
+function closeAddCertModal() {
+  document.getElementById('add-cert-modal').classList.remove('active');
+  document.getElementById('add-cert-modal').querySelector('form').reset();
+}
+
+async function submitNewCert(event) {
+  event.preventDefault();
+  const dateVal = document.getElementById('cert-date').value;
+  const num = document.getElementById('cert-number').value.trim();
+  const instr = document.getElementById('cert-instructor').value.trim();
+  const center = document.getElementById('cert-center').value.trim();
+  const payload = {
+    user_id: USER_ID,
+    name: document.getElementById('cert-name').value.trim(),
+    agency: document.getElementById('cert-agency').value.trim(),
+    certification_date: new Date(dateVal).getTime(),
+    ...(num && { certification_number: num }),
+    ...(instr && { instructor_name: instr }),
+    ...(center && { dive_center: center }),
+  };
+
+  try {
+    const resp = await fetch(`${CERTS_API}/certifications`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!resp.ok) throw new Error(await resp.text());
+    showToast('Certification saved!');
+    closeAddCertModal();
+    loadCertifications();
+  } catch (err) {
+    showToast('Failed to save certification', 'error');
+    console.error(err);
+  }
+}
+
+/* -------------------------------------------------
+   ADD CHECKLIST MODAL
+--------------------------------------------------*/
+function showAddChecklistModal() {
+  document.getElementById('add-checklist-modal').classList.add('active');
+}
+function closeAddChecklistModal() {
+  document.getElementById('add-checklist-modal').classList.remove('active');
+  document.getElementById('add-checklist-modal').querySelector('form').reset();
+}
+
+async function submitNewChecklist(event) {
+  event.preventDefault();
+  const payload = {
+    name: document.getElementById('checklist-name').value.trim(),
+    link: document.getElementById('checklist-link').value.trim(),
+  };
+
+  try {
+    const resp = await fetch(`${CERTS_API}/checklists`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!resp.ok) throw new Error(await resp.text());
+    showToast('Checklist saved!');
+    closeAddChecklistModal();
+    loadChecklists();
+  } catch (err) {
+    showToast('Failed to save checklist', 'error');
+    console.error(err);
+  }
+}
+
+/* -------------------------------------------------
    DATE HELPERS
 --------------------------------------------------*/
 function formatDate(timestamp) {

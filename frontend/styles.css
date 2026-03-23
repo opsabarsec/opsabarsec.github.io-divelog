@@ -122,11 +122,22 @@ body {
     display: block;
 }
 
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+}
+
 .section-title {
     font-size: 1.5rem;
     font-weight: 600;
-    margin-bottom: 25px;
+    margin-bottom: 0;
     color: var(--text-primary);
+}
+
+.required {
+    color: var(--danger-color);
 }
 
 .action-buttons {
