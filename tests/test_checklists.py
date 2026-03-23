@@ -14,7 +14,7 @@ load_dotenv()
 from fastapi.testclient import TestClient
 from starlette import status
 
-from app.services.checklists import app
+from api.checklists import app
 
 client = TestClient(app)
 

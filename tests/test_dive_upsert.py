@@ -14,7 +14,7 @@ load_dotenv(env_path)
 if "CONVEX_URL" not in os.environ:
     os.environ["CONVEX_URL"] = "https://test.convex.cloud"
 
-from app.main import app
+from api.main import app
 
 client = TestClient(app)
 

@@ -2,7 +2,7 @@
 
 from fastapi.testclient import TestClient
 from unittest.mock import patch, AsyncMock
-from app.main import app
+from api.main import app
 from dotenv import load_dotenv
 from pathlib import Path
 import os

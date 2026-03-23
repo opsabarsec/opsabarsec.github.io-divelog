@@ -6,7 +6,7 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 from starlette import status
 
-from app.main import app
+from api.main import app
 from tests.convex_storage_inspector import get_one_storage_id
 
 
