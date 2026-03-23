@@ -3,6 +3,7 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 const schema = defineSchema({
+<<<<<<< HEAD
   certifications: defineTable({
     user_id: v.string(),
     name: v.string(),              // e.g., "Open Water Diver", "Advanced Open Water"
@@ -13,6 +14,12 @@ const schema = defineSchema({
     dive_center: v.optional(v.string()),
     created_at: v.number(),
   }).index("by_user", ["user_id"]),
+=======
+  checklists: defineTable({
+    name: v.string(),
+    link: v.string(),
+  }),
+>>>>>>> c8fefac (checklists)
 
   dives: defineTable({
     user_id: v.string(),

@@ -8,7 +8,7 @@ CONVEX_URL=
 
 # Geoapify API key for maps and geocoding
 # Get your free API key at: https://www.geoapify.com/
-NEXT_PUBLIC_GEOAPIFY_API_KEY=
+NEXT_PUBLIC_GEOAPIFY_API_KEY= 
 MY_EMAIL =
 
 # API Keys

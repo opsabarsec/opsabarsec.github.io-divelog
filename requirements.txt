@@ -1,0 +1,6 @@
+fastapi>=0.128.0
+httpx>=0.28.1
+pydantic[email]>=2.9.2
+python-dotenv>=1.0.0
+python-multipart>=0.0.22
+aiohttp>=3.13.3

@@ -11,9 +11,14 @@
       "Bash(npm run build:*)",
       "Bash(npx convex:*)",
       "Bash(uv run python:*)",
+<<<<<<< HEAD
       "WebFetch(domain:github.com)",
       "Bash(gh api:*)",
       "Bash(curl:*)"
+=======
+      "Bash(python -m pytest:*)",
+      "Bash(python tests/test_checklists.py)"
+>>>>>>> c8fefac (checklists)
     ]
   }
 }
