@@ -65,11 +65,6 @@ async function loadConfig() {
       document.getElementById('profile-name').textContent = USER_NAME;
       document.title = `Divelog ${USER_NAME}`;
 
-      if (config.profile_photo) {
-        const photoEl = document.getElementById('profile-photo');
-        photoEl.src = `${DIVES_API}/profile-photo`;
-        photoEl.style.display = 'block';
-      }
     }
   } catch (error) {
     console.error('Failed to load config:', error);
@@ -163,8 +158,8 @@ function renderDiveCard(dive, showActions = true) {
       <div class="dive-card-stats">
         <div class="stat-item"><div class="stat-value">${dive.max_depth}m</div><div class="stat-label">Max Depth</div></div>
         <div class="stat-item"><div class="stat-value">${dive.duration}min</div><div class="stat-label">Duration</div></div>
-        <div class="stat-item"><div class="stat-value">${dive.temperature ?? '-'}C</div><div class="stat-label">Temp</div></div>
-        <div class="stat-item"><div class="stat-value">${dive.visibility ?? '-'}m</div><div class="stat-label">Visibility</div></div>
+        <div class="stat-item"><div class="stat-value">${dive.temperature ?? '-'}°C</div><div class="stat-label">Temp</div></div>
+        <div class="stat-item"><div class="stat-value">${dive.suit_thickness != null ? dive.suit_thickness + 'mm' : '-'}</div><div class="stat-label">Suit</div></div>
       </div>
 
       ${photoHtml}
@@ -172,9 +167,10 @@ function renderDiveCard(dive, showActions = true) {
       <div class="dive-card-details">
         <div class="detail-item"><span class="detail-label">Club</span><span class="detail-value">${dive.club_name}</span></div>
         <div class="detail-item"><span class="detail-label">Instructor</span><span class="detail-value">${dive.instructor_name}</span></div>
+        <div class="detail-item"><span class="detail-label">Weights</span><span class="detail-value">${dive.lead_weights != null ? dive.lead_weights + ' kg' : '-'}</span></div>
       </div>
 
-      ${dive.notes ? `<div class="dive-card-notes"><div class="notes-text">${dive.notes}</div></div>` : ''}
+      ${dive.notes ? `<div class="dive-card-notes"><div class="notes-label" style="font-size:0.8rem;color:var(--text-muted);margin-bottom:5px;">Comments</div><div class="notes-text">${dive.notes}</div></div>` : ''}
 
       ${actionsHtml}
     </div>
@@ -288,6 +284,44 @@ function renderCertCard(cert) {
 }
 
 /* -------------------------------------------------
+   CHECKLISTS
+--------------------------------------------------*/
+async function loadChecklists() {
+  const container = document.getElementById('checklists-list');
+  container.innerHTML = '<div class="loading">Loading...</div>';
+
+  try {
+    const response = await fetch(`${CERTS_API}/checklists`);
+    if (!response.ok) throw new Error();
+
+    const checklists = await response.json();
+
+    if (checklists.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <h3>No checklists</h3>
+        </div>`;
+      return;
+    }
+
+    container.innerHTML = checklists.map(renderChecklistItem).join('');
+
+  } catch (error) {
+    console.error(error);
+    container.innerHTML = '<div>Error loading checklists</div>';
+  }
+}
+
+function renderChecklistItem(item) {
+  return `
+    <div class="checklist-item">
+      <span class="checklist-name">${item.name}</span>
+      <a href="${item.link}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm">Open</a>
+    </div>
+  `;
+}
+
+/* -------------------------------------------------
    DATE HELPERS
 --------------------------------------------------*/
 function formatDate(timestamp) {
@@ -330,6 +364,7 @@ function switchView(viewName) {
   if (viewName === 'home') loadLatestDive();
   else if (viewName === 'dives') loadAllDives();
   else if (viewName === 'certifications') loadCertifications();
+  else if (viewName === 'checklists') loadChecklists();
 }
 
 /* -------------------------------------------------
