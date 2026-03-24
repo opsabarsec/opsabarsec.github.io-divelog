@@ -292,7 +292,10 @@ async function loadChecklists() {
 
   try {
     const response = await fetch(`${CERTS_API}/checklists`);
-    if (!response.ok) throw new Error();
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`HTTP ${response.status}: ${text}`);
+    }
 
     const checklists = await response.json();
 
@@ -307,8 +310,8 @@ async function loadChecklists() {
     container.innerHTML = checklists.map(renderChecklistItem).join('');
 
   } catch (error) {
-    console.error(error);
-    container.innerHTML = '<div>Error loading checklists</div>';
+    console.error('Checklists fetch error:', error);
+    container.innerHTML = `<div style="color:var(--danger-color);padding:20px;">Error: ${error.message}</div>`;
   }
 }
 
