@@ -686,6 +686,99 @@ def search_club(q: str = Query(..., description="Club name")) -> Any:
 
 
 # ---------------------------------------------------------
+# Checklists
+# ---------------------------------------------------------
+
+
+class ChecklistCreate(BaseModel):
+    name: str
+    link: str
+
+
+class ChecklistUpdate(BaseModel):
+    name: Optional[str] = None
+    link: Optional[str] = None
+
+
+@app.post("/checklists", response_model=None)
+async def create_checklist(payload: ChecklistCreate) -> Any:
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            f"{CONVEX_URL}/api/mutation",
+            json={"path": "checklists:createChecklist", "args": payload.model_dump(), "format": "json"},
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    if "error" in data:
+        return JSONResponse(status_code=400, content={"error": data["error"]})
+    return data.get("value", data)
+
+
+@app.get("/checklists", response_model=None)
+async def get_all_checklists() -> Any:
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            f"{CONVEX_URL}/api/query",
+            json={"path": "checklists:getAllChecklists", "args": {}, "format": "json"},
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    if "error" in data:
+        return JSONResponse(status_code=400, content={"error": data["error"]})
+    return data.get("value", [])
+
+
+@app.get("/checklists/{checklist_id}", response_model=None)
+async def get_checklist_by_id(checklist_id: str) -> Any:
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            f"{CONVEX_URL}/api/query",
+            json={"path": "checklists:getChecklistById", "args": {"id": checklist_id}, "format": "json"},
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    if "error" in data:
+        return JSONResponse(status_code=400, content={"error": data["error"]})
+    result = data.get("value")
+    if result is None:
+        return JSONResponse(status_code=404, content={"error": f"Checklist '{checklist_id}' not found"})
+    return result
+
+
+@app.put("/checklists/{checklist_id}", response_model=None)
+async def update_checklist(checklist_id: str, payload: ChecklistUpdate) -> Any:
+    args: dict[str, Any] = {"id": checklist_id}
+    if payload.name is not None:
+        args["name"] = payload.name
+    if payload.link is not None:
+        args["link"] = payload.link
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            f"{CONVEX_URL}/api/mutation",
+            json={"path": "checklists:updateChecklist", "args": args, "format": "json"},
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    if "error" in data or data.get("status") == "error":
+        return JSONResponse(status_code=400, content={"error": data.get("error") or data.get("errorMessage")})
+    return data.get("value", data)
+
+
+@app.delete("/checklists/{checklist_id}", response_model=None)
+async def delete_checklist(checklist_id: str) -> Any:
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            f"{CONVEX_URL}/api/mutation",
+            json={"path": "checklists:deleteChecklist", "args": {"id": checklist_id}, "format": "json"},
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    if "error" in data or data.get("status") == "error":
+        return JSONResponse(status_code=400, content={"error": data.get("error") or data.get("errorMessage")})
+    return data.get("value", data)
+
+
+# ---------------------------------------------------------
 # Run
 # ---------------------------------------------------------
 
