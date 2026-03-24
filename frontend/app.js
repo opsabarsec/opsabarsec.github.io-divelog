@@ -408,11 +408,9 @@ async function submitNewDive(event) {
       const fishData = await fishResp.json();
       console.log('[fish_finder] response:', fishData);
       if (fishResp.ok && fishData.success && fishData.species && fishData.species.length > 0) {
-        const top3 = fishData.species
-          .slice(0, 3)
-          .map(s => `${s.name} (${Math.round(s.accuracy * 100)}%)`)
-          .join(', ');
-        fishNotes = `Fish identified: ${top3}`;
+        const top = fishData.species[0];
+        const topResult = `${top.name} (${Math.round(top.accuracy * 100)}%)`;
+        fishNotes = `Fish identified: ${topResult}`;
         showToast(fishNotes);
       } else if (!fishResp.ok || !fishData.success) {
         const errMsg = fishData.error || `HTTP ${fishResp.status}`;
