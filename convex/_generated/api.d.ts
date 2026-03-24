@@ -8,11 +8,8 @@
  * @module
  */
 
-<<<<<<< HEAD
 import type * as certifications from "../certifications.js";
-=======
 import type * as checklists from "../checklists.js";
->>>>>>> c8fefac (checklists)
 import type * as dives from "../dives.js";
 import type * as files from "../files.js";
 
@@ -23,11 +20,8 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
-<<<<<<< HEAD
   certifications: typeof certifications;
-=======
   checklists: typeof checklists;
->>>>>>> c8fefac (checklists)
   dives: typeof dives;
   files: typeof files;
 }>;
