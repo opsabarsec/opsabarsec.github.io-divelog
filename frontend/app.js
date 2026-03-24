@@ -168,7 +168,7 @@ function renderDiveCard(dive, showActions = true) {
       ${photoHtml}
 
       <div class="dive-card-details">
-        <div class="detail-item"><span class="detail-label">Club</span><span class="detail-value">${dive.club_name}${dive.club_website ? ` &nbsp;<a href="${dive.club_website}" target="_blank" rel="noopener" style="font-size:0.8rem;">(website)</a>` : ''}</span></div>
+        <div class="detail-item"><span class="detail-label">Club</span><span class="detail-value">${dive.club_name}${dive.club_website ? `<br><a href="${dive.club_website}" target="_blank" rel="noopener" style="font-size:0.82rem;color:var(--accent);">${dive.club_website}</a>` : ''}</span></div>
         <div class="detail-item"><span class="detail-label">Instructor</span><span class="detail-value">${dive.instructor_name}</span></div>
         <div class="detail-item"><span class="detail-label">Weights</span><span class="detail-value">${dive.lead_weights != null ? dive.lead_weights + ' kg' : '-'}</span></div>
       </div>
@@ -231,7 +231,7 @@ function renderDiveMiniCard(dive) {
       </div>
 
       <div class="dive-card-mini-footer">
-        <span style="color: var(--text-muted); font-size: 0.85rem;">${dive.club_name}</span>
+        <span style="color: var(--text-muted); font-size: 0.85rem;">${dive.club_name}${dive.club_website ? ` &nbsp;<a href="${dive.club_website}" target="_blank" rel="noopener" style="font-size:0.8rem;color:var(--accent);" onclick="event.stopPropagation()">${dive.club_website}</a>` : ''}</span>
         <div>
           <button class="btn-icon" onclick="event.stopPropagation(); editDive('${dive._id}')" title="Edit">✎</button>
           <button class="btn-icon danger" onclick="event.stopPropagation(); confirmDeleteDive('${dive._id}')" title="Delete">🗑</button>
