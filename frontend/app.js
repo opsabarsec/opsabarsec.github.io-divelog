@@ -79,7 +79,7 @@ async function loadDiveStats() {
     const response = await fetch(`${DIVES_API}/dives?user_id=${USER_ID}`);
     if (response.ok) {
       const dives = await response.json();
-      const total = dives.length;
+      const total = dives.length > 0 ? Math.max(...dives.map(d => d.dive_number)) : 0;
       document.getElementById('total-dives').textContent =
         `${total} dive${total !== 1 ? 's' : ''}`;
     }
