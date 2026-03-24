@@ -11,6 +11,7 @@ export const addCertification = mutation({
     certification_number: v.optional(v.string()),
     instructor_name: v.optional(v.string()),
     dive_center: v.optional(v.string()),
+    photo_url: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const id = await ctx.db.insert("certifications", {

@@ -480,6 +480,15 @@ body {
     border-top: 1px solid var(--border-color);
 }
 
+.cert-badge-img {
+    display: block;
+    max-width: 180px;
+    max-height: 140px;
+    object-fit: contain;
+    margin: 12px auto 4px;
+    border-radius: var(--radius-sm);
+}
+
 /* Modal */
 .modal {
     display: none;

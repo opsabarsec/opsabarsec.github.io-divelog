@@ -11,6 +11,7 @@ const schema = defineSchema({
     certification_number: v.optional(v.string()),
     instructor_name: v.optional(v.string()),
     dive_center: v.optional(v.string()),
+    photo_url: v.optional(v.string()),
     created_at: v.number(),
   }).index("by_user", ["user_id"]),
 

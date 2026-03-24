@@ -276,6 +276,7 @@ function renderCertCard(cert) {
         ${cert.certification_number ? `<div class="cert-detail"><span class="cert-detail-label">Number</span><span class="cert-detail-value">${cert.certification_number}</span></div>` : ''}
         ${cert.instructor_name ? `<div class="cert-detail"><span class="cert-detail-label">Instructor</span><span class="cert-detail-value">${cert.instructor_name}</span></div>` : ''}
       </div>
+      ${cert.photo_url ? `<img src="${cert.photo_url}" alt="${cert.name}" class="cert-badge-img">` : ''}
       <div class="cert-actions">
         <button class="btn-icon danger" onclick="confirmDeleteCert('${cert._id}')" title="Delete">🗑</button>
       </div>
@@ -395,6 +396,7 @@ async function submitNewCert(event) {
   const num = document.getElementById('cert-number').value.trim();
   const instr = document.getElementById('cert-instructor').value.trim();
   const center = document.getElementById('cert-center').value.trim();
+  const photo = document.getElementById('cert-photo').value.trim();
   const payload = {
     user_id: USER_ID,
     name: document.getElementById('cert-name').value.trim(),
@@ -403,6 +405,7 @@ async function submitNewCert(event) {
     ...(num && { certification_number: num }),
     ...(instr && { instructor_name: instr }),
     ...(center && { dive_center: center }),
+    ...(photo && { photo_url: photo }),
   };
 
   try {

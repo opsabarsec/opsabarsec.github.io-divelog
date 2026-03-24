@@ -71,6 +71,7 @@ class Certification(BaseModel):
     certification_number: Optional[str] = None
     instructor_name: Optional[str] = None
     dive_center: Optional[str] = None
+    photo_url: Optional[str] = None
 
 
 class LoginRequest(BaseModel):
