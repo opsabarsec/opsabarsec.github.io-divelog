@@ -8,6 +8,8 @@ const CERTS_API = VERCEL_BASE;
 let USER_NAME = 'Diver';
 let USER_ID = 'default_user';
 let currentDives = [];
+let editingDiveId = null;
+let editingPhotoIds = [];
 
 // Restore session if returning user
 document.addEventListener('DOMContentLoaded', async () => {
@@ -166,7 +168,7 @@ function renderDiveCard(dive, showActions = true) {
       ${photoHtml}
 
       <div class="dive-card-details">
-        <div class="detail-item"><span class="detail-label">Club</span><span class="detail-value">${dive.club_name}</span></div>
+        <div class="detail-item"><span class="detail-label">Club</span><span class="detail-value">${dive.club_name}${dive.club_website ? ` &nbsp;<a href="${dive.club_website}" target="_blank" rel="noopener" style="font-size:0.8rem;">(website)</a>` : ''}</span></div>
         <div class="detail-item"><span class="detail-label">Instructor</span><span class="detail-value">${dive.instructor_name}</span></div>
         <div class="detail-item"><span class="detail-label">Weights</span><span class="detail-value">${dive.lead_weights != null ? dive.lead_weights + ' kg' : '-'}</span></div>
       </div>
@@ -237,6 +239,40 @@ function renderDiveMiniCard(dive) {
       </div>
     </div>
   `;
+}
+
+async function editDive(id) {
+  let dive = currentDives.find(d => d._id === id);
+  if (!dive) {
+    try {
+      const resp = await fetch(`${DIVES_API}/dives/${id}`);
+      if (resp.ok) dive = await resp.json();
+    } catch (e) {}
+  }
+  if (!dive) { showToast('Could not load dive', 'error'); return; }
+
+  editingDiveId = id;
+  editingPhotoIds = dive.photo_storage_ids || [];
+
+  document.getElementById('add-dive-modal-title').textContent = 'Edit Dive';
+  document.getElementById('dive-number').value = dive.dive_number;
+  document.getElementById('dive-date').value = formatDateForInput(dive.dive_date);
+  document.getElementById('dive-location').value = dive.location;
+  document.getElementById('dive-depth').value = dive.max_depth;
+  document.getElementById('dive-duration').value = dive.duration;
+  document.getElementById('dive-club').value = dive.club_name;
+  document.getElementById('dive-instructor').value = dive.instructor_name;
+  document.getElementById('dive-site').value = dive.site || '';
+  document.getElementById('dive-temp').value = dive.temperature ?? '';
+  document.getElementById('dive-suit').value = dive.suit_thickness ?? '';
+  document.getElementById('dive-weights').value = dive.lead_weights ?? '';
+  document.getElementById('dive-notes').value = dive.notes || '';
+  document.getElementById('dive-buddy-check').checked = dive.Buddy_check ?? true;
+  document.getElementById('dive-briefed').checked = dive.Briefed ?? true;
+
+  // Close detail modal if open, then open edit form
+  closeDiveDetailModal();
+  document.getElementById('add-dive-modal').classList.add('active');
 }
 
 function showDiveDetail(id) {
@@ -342,9 +378,15 @@ function renderChecklistItem(item) {
    ADD DIVE MODAL
 --------------------------------------------------*/
 function showAddDiveModal() {
+  editingDiveId = null;
+  editingPhotoIds = [];
+  document.getElementById('add-dive-modal-title').textContent = 'Log New Dive';
   document.getElementById('add-dive-modal').classList.add('active');
 }
 function closeAddDiveModal() {
+  editingDiveId = null;
+  editingPhotoIds = [];
+  document.getElementById('add-dive-modal-title').textContent = 'Log New Dive';
   document.getElementById('add-dive-modal').classList.remove('active');
   document.getElementById('add-dive-modal').querySelector('form').reset();
 }
@@ -420,7 +462,7 @@ async function submitNewDive(event) {
     duration: parseFloat(document.getElementById('dive-duration').value),
     club_name: document.getElementById('dive-club').value.trim(),
     instructor_name: document.getElementById('dive-instructor').value.trim(),
-    photo_storage_ids: photoStorageIds,
+    photo_storage_ids: photoFiles.length > 0 ? photoStorageIds : editingPhotoIds,
     buddy_check: document.getElementById('dive-buddy-check').checked,
     briefed: document.getElementById('dive-briefed').checked,
   };

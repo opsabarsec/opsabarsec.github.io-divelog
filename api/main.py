@@ -380,6 +380,15 @@ async def upsert_dive(dive: Dive) -> Any:
         lat, lon = dive.latitude, dive.longitude
         dive.osm_link = f"https://www.openstreetmap.org/?mlat={lat}&mlon={lon}#map=16/{lat}/{lon}"
 
+    # Look up club website if not already provided
+    if not dive.club_website:
+        try:
+            result = search_club_website(dive.club_name)
+            if result.get("success") and result.get("url"):
+                dive.club_website = result["url"]
+        except Exception:
+            pass
+
     payload = dive.model_dump(by_alias=True, exclude_none=True)
 
     async with httpx.AsyncClient() as client:
