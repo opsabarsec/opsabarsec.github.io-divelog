@@ -96,6 +96,17 @@
 
   </div>
 
+  <!-- Dive Detail Modal -->
+  <div id="dive-detail-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Dive Details</h3>
+        <button class="close-btn" onclick="closeDiveDetailModal()">&times;</button>
+      </div>
+      <div id="dive-detail-content" style="padding: 0 25px 25px;"></div>
+    </div>
+  </div>
+
   <!-- Confirm Delete Modal -->
   <div id="confirm-modal" class="modal">
     <div class="modal-content modal-small">
@@ -174,6 +185,10 @@
             <label>Weights (kg)</label>
             <input type="number" id="dive-weights" step="0.5" min="0">
           </div>
+        </div>
+        <div class="form-group">
+          <label>Photos</label>
+          <input type="file" id="dive-photos" accept="image/jpeg,image/png,image/bmp" multiple>
         </div>
         <div class="form-group">
           <label>Comments</label>
