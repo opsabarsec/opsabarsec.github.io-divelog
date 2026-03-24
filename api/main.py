@@ -1,6 +1,6 @@
 from typing import Optional, Any
 from fastapi import FastAPI, Query, UploadFile, File, Response
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 import httpx
@@ -252,30 +252,25 @@ async def upload_photos(files: list[UploadFile] = File(...)) -> dict[str, list[s
 
 
 @app.get("/download-photo/{storage_id}", response_model=None)
-async def download_photo(storage_id: str) -> Response | JSONResponse:
+async def download_photo(storage_id: str) -> RedirectResponse | JSONResponse:
     """
-    Download an image stored in Convex using its storage ID.
+    Resolve a Convex storage ID to a URL and redirect the browser to it.
     """
     try:
         async with httpx.AsyncClient() as client:
-            file_resp = await client.get(f"{CONVEX_URL}/api/storage/{storage_id}")
-            file_resp.raise_for_status()
-            file_bytes = file_resp.content
-            content_type = file_resp.headers.get("content-type", "image/jpeg")
+            resp = await client.post(
+                f"{CONVEX_URL}/api/query",
+                json={"path": "files:getFileUrl", "args": {"storageId": storage_id}, "format": "json"},
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            url = data.get("value")
+            if not url:
+                return JSONResponse(status_code=404, content={"error": f"No URL for storage ID '{storage_id}'"})
     except Exception as e:
-        return JSONResponse(
-            status_code=404,
-            content={"error": f"Could not download storage ID '{storage_id}': {str(e)}"},
-        )
+        return JSONResponse(status_code=404, content={"error": str(e)})
 
-    return Response(
-        content=file_bytes,
-        media_type=content_type,
-        headers={
-            "Content-Length": str(len(file_bytes)),
-            "Content-Disposition": f'inline; filename="{storage_id}"',
-        },
-    )
+    return RedirectResponse(url=url, status_code=307)
 
 
 # ---------------------------------------------------------
