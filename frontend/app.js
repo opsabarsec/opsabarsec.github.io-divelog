@@ -352,134 +352,102 @@ function closeAddDiveModal() {
 async function submitNewDive(event) {
   event.preventDefault();
 
-  // Step 1: Upload photos if selected
   let photoStorageIds = [];
+  let fishNotes = '';
   const photoFiles = document.getElementById('dive-photos').files;
 
   if (photoFiles.length > 0) {
+    // Step 1: Fish identification on the first (cover) photo — runs before save so result goes into notes
+    showToast('Identifying fish...');
+    const fd = new FormData();
+    fd.append('file', photoFiles[0]);
+    try {
+      const fishResp = await fetch(`${DIVES_API}/identify-fish`, { method: 'POST', body: fd });
+      const fishData = await fishResp.json();
+      console.log('[fish_finder] response:', fishData);
+      if (fishResp.ok && fishData.success && fishData.species && fishData.species.length > 0) {
+        const top3 = fishData.species
+          .slice(0, 3)
+          .map(s => `${s.name} (${Math.round(s.accuracy * 100)}%)`)
+          .join(', ');
+        fishNotes = `Fish identified: ${top3}`;
+        showToast(fishNotes);
+      } else if (!fishResp.ok || !fishData.success) {
+        const errMsg = fishData.error || `HTTP ${fishResp.status}`;
+        console.error('[fish_finder] failed:', errMsg);
+        showToast(`Fish ID failed: ${errMsg}`, 'error');
+      } else {
+        showToast('No fish identified in this photo');
+      }
+    } catch (err) {
+      console.error('[fish_finder] network error:', err);
+      showToast('Fish identification unavailable', 'error');
+    }
+
+    // Step 2: Upload all photos to Convex storage (first file becomes cover photo)
     showToast('Uploading photos...');
     const formData = new FormData();
     for (const file of photoFiles) {
       formData.append('files', file);
     }
     try {
-      const uploadResp = await fetch(`${DIVES_API}/upload-photos`, {
-        method: 'POST',
-        body: formData,
-      });
+      const uploadResp = await fetch(`${DIVES_API}/upload-photos`, { method: 'POST', body: formData });
       if (uploadResp.ok) {
         const uploadData = await uploadResp.json();
         photoStorageIds = uploadData.photo_storage_ids || [];
       } else {
-        console.error('Photo upload failed:', await uploadResp.text());
+        const errText = await uploadResp.text();
+        console.error('[upload-photos] failed:', errText);
+        showToast('Photo upload failed', 'error');
       }
     } catch (err) {
-      console.error('Photo upload error:', err);
+      console.error('[upload-photos] network error:', err);
+      showToast('Photo upload error', 'error');
     }
+  }
 
-    // Step 2: Run fish identification on each photo (fire-and-forget, show results after save)
-    const fishPromises = Array.from(photoFiles).map(file => {
-      const fd = new FormData();
-      fd.append('file', file);
-      return fetch(`${DIVES_API}/identify-fish`, { method: 'POST', body: fd })
-        .then(r => r.ok ? r.json() : null)
-        .catch(() => null);
+  // Step 3: Build payload — prepend fish identification results to any manual notes
+  const dateVal = document.getElementById('dive-date').value;
+  const manualNotes = document.getElementById('dive-notes').value.trim();
+  const combinedNotes = [fishNotes, manualNotes].filter(Boolean).join('\n');
+
+  const payload = {
+    user_id: USER_ID,
+    dive_number: parseInt(document.getElementById('dive-number').value),
+    dive_date: new Date(dateVal).getTime(),
+    location: document.getElementById('dive-location').value.trim(),
+    max_depth: parseFloat(document.getElementById('dive-depth').value),
+    duration: parseFloat(document.getElementById('dive-duration').value),
+    club_name: document.getElementById('dive-club').value.trim(),
+    instructor_name: document.getElementById('dive-instructor').value.trim(),
+    photo_storage_ids: photoStorageIds,
+    buddy_check: document.getElementById('dive-buddy-check').checked,
+    briefed: document.getElementById('dive-briefed').checked,
+  };
+  const site = document.getElementById('dive-site').value.trim();
+  if (site) payload.site = site;
+  const temp = document.getElementById('dive-temp').value;
+  if (temp !== '') payload.temperature = parseFloat(temp);
+  const suit = document.getElementById('dive-suit').value;
+  if (suit !== '') payload.suit_thickness = parseFloat(suit);
+  const weights = document.getElementById('dive-weights').value;
+  if (weights !== '') payload.lead_weights = parseFloat(weights);
+  if (combinedNotes) payload.notes = combinedNotes;
+
+  // Step 4: Save dive
+  try {
+    const resp = await fetch(`${DIVES_API}/dives/upsert`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
     });
-
-    // Step 3: Build and save the dive
-    const dateVal = document.getElementById('dive-date').value;
-    const payload = {
-      user_id: USER_ID,
-      dive_number: parseInt(document.getElementById('dive-number').value),
-      dive_date: new Date(dateVal).getTime(),
-      location: document.getElementById('dive-location').value.trim(),
-      max_depth: parseFloat(document.getElementById('dive-depth').value),
-      duration: parseFloat(document.getElementById('dive-duration').value),
-      club_name: document.getElementById('dive-club').value.trim(),
-      instructor_name: document.getElementById('dive-instructor').value.trim(),
-      photo_storage_ids: photoStorageIds,
-      buddy_check: document.getElementById('dive-buddy-check').checked,
-      briefed: document.getElementById('dive-briefed').checked,
-    };
-    const site = document.getElementById('dive-site').value.trim();
-    if (site) payload.site = site;
-    const temp = document.getElementById('dive-temp').value;
-    if (temp !== '') payload.temperature = parseFloat(temp);
-    const suit = document.getElementById('dive-suit').value;
-    if (suit !== '') payload.suit_thickness = parseFloat(suit);
-    const weights = document.getElementById('dive-weights').value;
-    if (weights !== '') payload.lead_weights = parseFloat(weights);
-    const notes = document.getElementById('dive-notes').value.trim();
-    if (notes) payload.notes = notes;
-
-    try {
-      const resp = await fetch(`${DIVES_API}/dives/upsert`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!resp.ok) throw new Error(await resp.text());
-      showToast('Dive saved!');
-      closeAddDiveModal();
-      loadAllDives();
-    } catch (err) {
-      showToast('Failed to save dive', 'error');
-      console.error(err);
-      return;
-    }
-
-    // Step 4: Show fish identification results when ready
-    const fishResults = await Promise.all(fishPromises);
-    const allSpecies = fishResults
-      .filter(r => r && r.success && r.species && r.species.length > 0)
-      .flatMap(r => r.species)
-      .sort((a, b) => b.accuracy - a.accuracy);
-    if (allSpecies.length > 0) {
-      const top = allSpecies.slice(0, 3).map(s => `${s.name} (${Math.round(s.accuracy * 100)}%)`).join(', ');
-      showToast(`Fish identified: ${top}`);
-    }
-
-  } else {
-    // No photos — save dive directly
-    const dateVal = document.getElementById('dive-date').value;
-    const payload = {
-      user_id: USER_ID,
-      dive_number: parseInt(document.getElementById('dive-number').value),
-      dive_date: new Date(dateVal).getTime(),
-      location: document.getElementById('dive-location').value.trim(),
-      max_depth: parseFloat(document.getElementById('dive-depth').value),
-      duration: parseFloat(document.getElementById('dive-duration').value),
-      club_name: document.getElementById('dive-club').value.trim(),
-      instructor_name: document.getElementById('dive-instructor').value.trim(),
-      photo_storage_ids: [],
-      buddy_check: document.getElementById('dive-buddy-check').checked,
-      briefed: document.getElementById('dive-briefed').checked,
-    };
-    const site = document.getElementById('dive-site').value.trim();
-    if (site) payload.site = site;
-    const temp = document.getElementById('dive-temp').value;
-    if (temp !== '') payload.temperature = parseFloat(temp);
-    const suit = document.getElementById('dive-suit').value;
-    if (suit !== '') payload.suit_thickness = parseFloat(suit);
-    const weights = document.getElementById('dive-weights').value;
-    if (weights !== '') payload.lead_weights = parseFloat(weights);
-    const notes = document.getElementById('dive-notes').value.trim();
-    if (notes) payload.notes = notes;
-
-    try {
-      const resp = await fetch(`${DIVES_API}/dives/upsert`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!resp.ok) throw new Error(await resp.text());
-      showToast('Dive saved!');
-      closeAddDiveModal();
-      loadAllDives();
-    } catch (err) {
-      showToast('Failed to save dive', 'error');
-      console.error(err);
-    }
+    if (!resp.ok) throw new Error(await resp.text());
+    showToast('Dive saved!');
+    closeAddDiveModal();
+    loadAllDives();
+  } catch (err) {
+    showToast('Failed to save dive', 'error');
+    console.error(err);
   }
 }
 

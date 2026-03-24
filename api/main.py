@@ -256,44 +256,23 @@ async def download_photo(storage_id: str) -> Response | JSONResponse:
     """
     Download an image stored in Convex using its storage ID.
     """
-
-    # Step 1: Request metadata from Convex
-    try:
-        async with httpx.AsyncClient() as client:
-            meta_resp = await client.get(f"{CONVEX_URL}/api/storage/{storage_id}/metadata")
-            meta_resp.raise_for_status()
-            meta = meta_resp.json()
-    except Exception:
-        return JSONResponse(
-            status_code=404,
-            content={"error": f"Could not find metadata for storage ID '{storage_id}'"},
-        )
-
-    content_type = meta.get("contentType")
-    size = meta.get("size")
-
-    if not content_type:
-        return JSONResponse(
-            status_code=500, content={"error": "Convex metadata missing 'contentType'"}
-        )
-
-    # Step 2: Stream the file bytes from Convex
     try:
         async with httpx.AsyncClient() as client:
             file_resp = await client.get(f"{CONVEX_URL}/api/storage/{storage_id}")
             file_resp.raise_for_status()
             file_bytes = file_resp.content
-    except Exception:
+            content_type = file_resp.headers.get("content-type", "image/jpeg")
+    except Exception as e:
         return JSONResponse(
-            status_code=500, content={"error": f"Failed to download file with ID '{storage_id}'"}
+            status_code=404,
+            content={"error": f"Could not download storage ID '{storage_id}': {str(e)}"},
         )
 
-    # Step 3: Return actual file bytes with correct MIME type
     return Response(
         content=file_bytes,
         media_type=content_type,
         headers={
-            "Content-Length": str(size) if size is not None else str(len(file_bytes)),
+            "Content-Length": str(len(file_bytes)),
             "Content-Disposition": f'inline; filename="{storage_id}"',
         },
     )
