@@ -14,7 +14,7 @@ Key features and autimatization:
 - **Photo upload** — attach dive photos as digital proof, viewable full-screen on mobile
 - **Accessible anywhere** — phone, tablet, or desktop, online or shared with your instructor
 
-The app is **free and open source** (MIT licence). No subscription, no vendor lock-in — host it yourself or fork it. You will just need to create a convex account, get free API keys for geolocation at https://www.geoapify.com/ and fishal.ai and the folders/files structure is made to be easily deployed for free on https://www.vercel.ai .
+The app is **free and open source** (MIT licence). No subscription, no vendor lock-in — host it yourself or fork it. You will just need to create a convex account, get free API keys for geolocation at https://www.geoapify.com/ and fishal.ai and the folders/files structure is made to be easily deployed for free on https://www.vercel.ai . All env variables to be added are documented in the file env_example.txt
 
 ---
 
