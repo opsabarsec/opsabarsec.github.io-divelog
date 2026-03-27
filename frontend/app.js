@@ -358,7 +358,7 @@ function renderCertCard(cert) {
         ${cert.instructor_name ? `<div class="cert-detail"><span class="cert-detail-label">Instructor</span><span class="cert-detail-value">${cert.instructor_name}</span></div>` : ''}
         ${cert.dive_center ? `<div class="cert-detail"><span class="cert-detail-label">Club</span><span class="cert-detail-value">${cert.dive_center}</span></div>` : ''}
       </div>
-      ${cert.photo_url ? `<img src="${cert.photo_url}" alt="${cert.name}" class="cert-badge-img">` : ''}
+      ${cert.photo_url ? `<img src="${cert.photo_url}" alt="${cert.name}" class="cert-badge-img" onclick="openLightbox(this.src)" style="cursor:zoom-in;">` : ''}
       <div class="cert-actions">
         <button class="btn-icon danger" onclick="confirmDeleteCert('${cert._id}')" title="Delete">🗑</button>
       </div>
