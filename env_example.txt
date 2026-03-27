@@ -1,25 +1,32 @@
+PROFILE_PHOTO = 'myphoto_dive.jpg'
+
+PROFILE_PASSWORD = 'my_password121!'
+
+NAME_SURNAME = 'Gipo Farassino'
+
+ADDRESS = '14 Rue d'Anthoine, 13002 Marseille, France'
+
+MY_NUMBER = 0456322090
+
+MY_EMAIL = 
+
+EMERGENCY_CONTACT = Uncle Berry
+
+EMERGENCY_CONTACT_NUMBER = 0456322091
+
 # Deployment used by `npx convex dev`
 # Convex Configuration
 
-CONVEX_DEPLOYMENT= # team: xxxx, project: scubalogs
-CONVEX_URL= 
-
-
+CONVEX_DEPLOYMENT= 'dev:given-name-419'
+CONVEX_URL= 'https://given-name-419.convex.cloud'
 
 # Geoapify API key for maps and geocoding
 # Get your free API key at: https://www.geoapify.com/
-NEXT_PUBLIC_GEOAPIFY_API_KEY= 
-MY_EMAIL =
 
-# API Keys
-NEXT_PUBLIC_API_URL= localhost.xxxx
+NEXT_PUBLIC_GEOAPIFY_API_KEY= 
+
+# Fishal API Keys
 
 FISHAL_API_KEY = 
 
 FISHAL_API_ID = 
-
-NAME_SURNAME = 'Gipo Farassino'
-
-PROFILE_PHOTO = 'myphoto_dive.jpg'
-
-PROFILE_PASSWORD = 'my_password121!'

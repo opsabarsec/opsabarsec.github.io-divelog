@@ -2,19 +2,19 @@
 
 # DiveLog Web APP — Free & Open Source Digital Dive Logbook
 
-Filling in a paper logbook after every dive takes **10–15 minutes**: writing location, depth, duration, sketching the site, getting the club stamp, noting the species you spotted. Over a lifetime of diving that adds up to hours of tedious work — and the result stays on a shelf at home. Plus you need to remember to bring it in the backpack for every diving holiday.
+Filling in a paper logbook after every dive takes **10–15 minutes**: writing dive details, getting the club stamp, noting the species you spotted. That is a boring part of the process and you need to remember to bring it in the backpack for every diving holiday. And you need a separate logbook if you do freediving on the side of scuba diving.
 
-**DiveLog** replaces the paper book with a web app you can reach from any device, anywhere. Automatizes the logging process and uses AI fish identification
+**DiveLog** replaces the paper book with a web app you can reach from any device, anywhere. It adds the option to log dives without bottles. Automatizes the logging process and uses AI fish identification.
 
-Key advantages over a paper logbook:
+Key features and autimatization:
 
 - **Automatic geolocation** — type a location name, get GPS coordinates and an OpenStreetMap link instantly
-- **Automatic fish identification** — upload a photo of a fish and the species is identified and added to your notes
+- **Automatic fish identification** — upload a photo of a fish and the species is identified and added to your notes by calling the API endpoint from https://www.fishial.ai/
 - **Club website lookup** — the club's official website is found and linked automatically
 - **Photo upload** — attach dive photos as digital proof, viewable full-screen on mobile
 - **Accessible anywhere** — phone, tablet, or desktop, online or shared with your instructor
 
-The app is **free and open source** (MIT licence). No subscription, no vendor lock-in — host it yourself or fork it.
+The app is **free and open source** (MIT licence). No subscription, no vendor lock-in — host it yourself or fork it. You will just need to create a convex account, get free API keys for geolocation at https://www.geoapify.com/ and fishal.ai and the folders/files structure is made to be easily deployed for free on https://www.vercel.ai .
 
 ---
 

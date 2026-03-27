@@ -91,9 +91,9 @@ export const getLatestDive = query({
       .query("dives")
       .withIndex("by_dive_number", (q) => q.eq("user_id", args.user_id))
       .collect();
-    if (dives.length === 0) return null;
-    // Return the dive with the most recent dive_date
-    return dives.sort((a, b) => b.dive_date - a.dive_date)[0];
+    const scubaDives = dives.filter(d => d.mode !== "freediving");
+    if (scubaDives.length === 0) return null;
+    return scubaDives.sort((a, b) => b.dive_date - a.dive_date)[0];
   },
 });
 
