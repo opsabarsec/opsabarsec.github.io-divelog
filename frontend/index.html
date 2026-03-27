@@ -167,6 +167,12 @@
           </div>
         </div>
         <div class="form-row">
+          <div class="form-group" style="flex:1;">
+            <label>Club Website <small style="color:var(--text-muted);font-weight:normal;">(auto-filled — override if wrong)</small></label>
+            <input type="url" id="dive-club-website" placeholder="https://...">
+          </div>
+        </div>
+        <div class="form-row">
           <div class="form-group">
             <label>Site</label>
             <input type="text" id="dive-site" placeholder="e.g. Blue Hole">
@@ -278,6 +284,13 @@
         </div>
       </form>
     </div>
+  </div>
+
+  <!-- Lightbox -->
+  <div id="lightbox-overlay" onclick="closeLightbox()" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.92); z-index:9999; align-items:center; justify-content:center;">
+    <button onclick="closeLightbox()" style="position:absolute; top:16px; right:20px; background:none; border:none; color:#fff; font-size:2.2rem; cursor:pointer; line-height:1;">&times;</button>
+    <img id="lightbox-img" src="" alt="Full size photo" onclick="event.stopPropagation()"
+      style="max-width:95vw; max-height:92vh; object-fit:contain; border-radius:6px; box-shadow:0 8px 40px rgba(0,0,0,0.7);">
   </div>
 
   <script src="app.js"></script>

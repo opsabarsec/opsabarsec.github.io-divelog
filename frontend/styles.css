@@ -304,6 +304,11 @@ body {
     height: 100px;
     object-fit: cover;
     flex-shrink: 0;
+    cursor: zoom-in;
+    transition: opacity 0.15s ease;
+}
+.dive-photo:hover {
+    opacity: 0.85;
 }
 
 .dive-card-details {
@@ -327,6 +332,8 @@ body {
 .detail-value {
     font-size: 0.95rem;
     color: var(--text-primary);
+    word-break: break-word;
+    overflow-wrap: break-word;
 }
 
 .dive-card-notes {

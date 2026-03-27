@@ -130,7 +130,7 @@ function renderDiveCard(dive, showActions = true) {
   const photoHtml = dive.photo_storage_ids && dive.photo_storage_ids.length > 0
     ? `<div class="dive-card-photos">
         ${dive.photo_storage_ids.map(id =>
-          `<img src="${DIVES_API}/download-photo/${id}" alt="Dive photo" class="dive-photo" onerror="this.style.display='none'">`
+          `<img src="${DIVES_API}/download-photo/${id}" alt="Dive photo" class="dive-photo" onclick="openLightbox(this.src)" onerror="this.style.display='none'">`
         ).join('')}
       </div>`
     : '';
@@ -168,7 +168,7 @@ function renderDiveCard(dive, showActions = true) {
       ${photoHtml}
 
       <div class="dive-card-details">
-        <div class="detail-item"><span class="detail-label">Club</span><span class="detail-value">${dive.club_name}${dive.club_website ? `<br><a href="${dive.club_website}" target="_blank" rel="noopener" style="font-size:0.82rem;color:var(--accent);">${dive.club_website}</a>` : ''}</span></div>
+        <div class="detail-item"><span class="detail-label">Club</span><span class="detail-value">${dive.club_name}${dive.club_website ? ` &nbsp;<a href="${dive.club_website}" target="_blank" rel="noopener" style="font-size:0.82rem;color:var(--accent);">website</a>` : ''}</span></div>
         <div class="detail-item"><span class="detail-label">Instructor</span><span class="detail-value">${dive.instructor_name}</span></div>
         <div class="detail-item"><span class="detail-label">Weights</span><span class="detail-value">${dive.lead_weights != null ? dive.lead_weights + ' kg' : '-'}</span></div>
       </div>
@@ -231,7 +231,7 @@ function renderDiveMiniCard(dive) {
       </div>
 
       <div class="dive-card-mini-footer">
-        <span style="color: var(--text-muted); font-size: 0.85rem;">${dive.club_name}${dive.club_website ? ` &nbsp;<a href="${dive.club_website}" target="_blank" rel="noopener" style="font-size:0.8rem;color:var(--accent);" onclick="event.stopPropagation()">${dive.club_website}</a>` : ''}</span>
+        <span style="color: var(--text-muted); font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 55%;">${dive.club_name}${dive.club_website ? ` &nbsp;<a href="${dive.club_website}" target="_blank" rel="noopener" style="font-size:0.8rem;color:var(--accent);" onclick="event.stopPropagation()">website</a>` : ''}</span>
         <div>
           <button class="btn-icon" onclick="event.stopPropagation(); editDive('${dive._id}')" title="Edit">✎</button>
           <button class="btn-icon danger" onclick="event.stopPropagation(); confirmDeleteDive('${dive._id}')" title="Delete">🗑</button>
@@ -262,6 +262,7 @@ async function editDive(id) {
   document.getElementById('dive-duration').value = dive.duration;
   document.getElementById('dive-club').value = dive.club_name;
   document.getElementById('dive-instructor').value = dive.instructor_name;
+  document.getElementById('dive-club-website').value = dive.club_website || '';
   document.getElementById('dive-site').value = dive.site || '';
   document.getElementById('dive-temp').value = dive.temperature ?? '';
   document.getElementById('dive-suit').value = dive.suit_thickness ?? '';
@@ -284,6 +285,21 @@ function showDiveDetail(id) {
 
 function closeDiveDetailModal() {
   document.getElementById('dive-detail-modal').classList.remove('active');
+}
+
+function openLightbox(src) {
+  const overlay = document.getElementById('lightbox-overlay');
+  document.getElementById('lightbox-img').src = src;
+  overlay.style.display = 'flex';
+  document.addEventListener('keydown', _lightboxEscHandler);
+}
+function closeLightbox() {
+  document.getElementById('lightbox-overlay').style.display = 'none';
+  document.getElementById('lightbox-img').src = '';
+  document.removeEventListener('keydown', _lightboxEscHandler);
+}
+function _lightboxEscHandler(e) {
+  if (e.key === 'Escape') closeLightbox();
 }
 
 /* -------------------------------------------------
@@ -381,6 +397,10 @@ function showAddDiveModal() {
   editingDiveId = null;
   editingPhotoIds = [];
   document.getElementById('add-dive-modal-title').textContent = 'Log New Dive';
+  if (currentDives.length > 0) {
+    const maxNumber = Math.max(...currentDives.map(d => d.dive_number || 0));
+    document.getElementById('dive-number').value = maxNumber + 1;
+  }
   document.getElementById('add-dive-modal').classList.add('active');
 }
 function closeAddDiveModal() {
@@ -399,29 +419,34 @@ async function submitNewDive(event) {
   const photoFiles = document.getElementById('dive-photos').files;
 
   if (photoFiles.length > 0) {
-    // Step 1: Fish identification on the first (cover) photo — runs before save so result goes into notes
-    showToast('Identifying fish...');
-    const fd = new FormData();
-    fd.append('file', photoFiles[0]);
-    try {
-      const fishResp = await fetch(`${DIVES_API}/identify-fish`, { method: 'POST', body: fd });
-      const fishData = await fishResp.json();
-      console.log('[fish_finder] response:', fishData);
-      if (fishResp.ok && fishData.success && fishData.species && fishData.species.length > 0) {
-        const top = fishData.species[0];
-        const topResult = `${top.name} (${Math.round(top.accuracy * 100)}%)`;
-        fishNotes = `Fish identified: ${topResult}`;
-        showToast(fishNotes);
-      } else if (!fishResp.ok || !fishData.success) {
-        const errMsg = fishData.error || `HTTP ${fishResp.status}`;
-        console.error('[fish_finder] failed:', errMsg);
-        showToast(`Fish ID failed: ${errMsg}`, 'error');
-      } else {
-        showToast('No fish identified in this photo');
+    // Step 1: Fish identification on files[1..n] (file[0] is the dive cover photo, not a fish)
+    const fishFiles = Array.from(photoFiles).slice(1);
+    if (fishFiles.length > 0) {
+      showToast(`Identifying fish in ${fishFiles.length} photo(s)...`);
+      const fishResults = [];
+      for (let i = 0; i < fishFiles.length; i++) {
+        const fd = new FormData();
+        fd.append('file', fishFiles[i]);
+        try {
+          const fishResp = await fetch(`${DIVES_API}/identify-fish`, { method: 'POST', body: fd });
+          const fishData = await fishResp.json();
+          console.log(`[fish_finder] file ${i + 1} response:`, fishData);
+          if (fishResp.ok && fishData.success && fishData.species && fishData.species.length > 0) {
+            const top = fishData.species[0];
+            fishResults.push(`fish${i + 1}: ${top.name} (${Math.round(top.accuracy * 100)}%)`);
+          } else {
+            console.warn(`[fish_finder] file ${i + 1}: no species found`);
+          }
+        } catch (err) {
+          console.error(`[fish_finder] file ${i + 1} network error:`, err);
+        }
       }
-    } catch (err) {
-      console.error('[fish_finder] network error:', err);
-      showToast('Fish identification unavailable', 'error');
+      if (fishResults.length > 0) {
+        fishNotes = fishResults.join(', ');
+        showToast(`Fish identified: ${fishNotes}`);
+      } else {
+        showToast('No fish identified in uploaded photos');
+      }
     }
 
     // Step 2: Upload all photos to Convex storage (first file becomes cover photo)
@@ -464,6 +489,8 @@ async function submitNewDive(event) {
     buddy_check: document.getElementById('dive-buddy-check').checked,
     briefed: document.getElementById('dive-briefed').checked,
   };
+  const clubWebsite = document.getElementById('dive-club-website').value.trim();
+  if (clubWebsite) payload.club_website = clubWebsite;
   const site = document.getElementById('dive-site').value.trim();
   if (site) payload.site = site;
   const temp = document.getElementById('dive-temp').value;
