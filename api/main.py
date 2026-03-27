@@ -38,7 +38,8 @@ app.add_middleware(
 
 class Dive(BaseModel):
     user_id: str
-    dive_number: int
+    dive_number: Optional[int] = None       # scuba dives only
+    freedive_number: Optional[int] = None   # freedives only
     dive_date: int
     location: str
     duration: float

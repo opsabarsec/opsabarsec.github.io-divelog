@@ -99,7 +99,8 @@ async function loadDiveStats() {
     const response = await fetch(`${DIVES_API}/dives?user_id=${USER_ID}`);
     if (response.ok) {
       const dives = await response.json();
-      const total = dives.length > 0 ? Math.max(...dives.map(d => d.dive_number)) : 0;
+      const scubaDives = dives.filter(d => d.mode !== 'freediving');
+      const total = scubaDives.length > 0 ? Math.max(...scubaDives.map(d => d.dive_number || 0)) : 0;
       document.getElementById('total-dives').textContent =
         `${total} dive${total !== 1 ? 's' : ''}`;
     }
@@ -182,7 +183,7 @@ function renderDiveCard(dive, showActions = true) {
     <div class="dive-card">
       <div class="dive-card-header">
         <div class="dive-info">
-          <div class="dive-number">Dive #${dive.dive_number}${dive.mode === 'freediving' ? ' <span class="freedive-badge">freedive</span>' : ''}</div>
+          <div class="dive-number">Dive #${dive.mode === 'freediving' ? dive.freedive_number : dive.dive_number}${dive.mode === 'freediving' ? ' <span class="freedive-badge">freedive</span>' : ''}</div>
           <div class="dive-location">${dive.location}</div>
           ${dive.site ? `<div class="dive-site">${dive.site}</div>` : ''}
           ${osmLinkHtml}
@@ -250,7 +251,7 @@ function renderDiveMiniCard(dive) {
     <div class="dive-card-mini" onclick="showDiveDetail('${dive._id}')" style="cursor:pointer;">
       <div class="dive-card-mini-header">
         <div>
-          <div class="dive-number">Dive #${dive.dive_number}${dive.mode === 'freediving' ? ' <span class="freedive-badge">freedive</span>' : ''}</div>
+          <div class="dive-number">Dive #${dive.mode === 'freediving' ? dive.freedive_number : dive.dive_number}${dive.mode === 'freediving' ? ' <span class="freedive-badge">freedive</span>' : ''}</div>
           <div class="dive-location">${dive.location}</div>
           ${dive.site ? `<div class="dive-site">${dive.site}</div>` : ''}
         </div>
@@ -287,7 +288,7 @@ async function editDive(id) {
   editingPhotoIds = dive.photo_storage_ids || [];
 
   document.getElementById('add-dive-modal-title').textContent = 'Edit Dive';
-  document.getElementById('dive-number').value = dive.dive_number;
+  document.getElementById('dive-number').value = dive.mode === 'freediving' ? (dive.freedive_number ?? '') : (dive.dive_number ?? '');
   document.getElementById('dive-date').value = formatDateForInput(dive.dive_date);
   document.getElementById('dive-location').value = dive.location;
   document.getElementById('dive-depth').value = dive.max_depth;
@@ -427,14 +428,25 @@ function renderChecklistItem(item) {
 /* -------------------------------------------------
    ADD DIVE MODAL
 --------------------------------------------------*/
+function suggestNextDiveNumber() {
+  const isFreedive = document.getElementById('dive-freedive').checked;
+  if (isFreedive) {
+    const freedives = currentDives.filter(d => d.mode === 'freediving');
+    const max = freedives.length > 0 ? Math.max(...freedives.map(d => d.freedive_number || 0)) : 0;
+    document.getElementById('dive-number').value = max + 1;
+  } else {
+    const scuba = currentDives.filter(d => d.mode !== 'freediving');
+    const max = scuba.length > 0 ? Math.max(...scuba.map(d => d.dive_number || 0)) : 0;
+    document.getElementById('dive-number').value = max + 1;
+  }
+}
+
 function showAddDiveModal() {
   editingDiveId = null;
   editingPhotoIds = [];
   document.getElementById('add-dive-modal-title').textContent = 'Log New Dive';
-  if (currentDives.length > 0) {
-    const maxNumber = Math.max(...currentDives.map(d => d.dive_number || 0));
-    document.getElementById('dive-number').value = maxNumber + 1;
-  }
+  suggestNextDiveNumber();
+  document.getElementById('dive-freedive').addEventListener('change', suggestNextDiveNumber);
   document.getElementById('add-dive-modal').classList.add('active');
 }
 function closeAddDiveModal() {
@@ -510,9 +522,11 @@ async function submitNewDive(event) {
   const manualNotes = document.getElementById('dive-notes').value.trim();
   const combinedNotes = [fishNotes, manualNotes].filter(Boolean).join('\n');
 
+  const isFreedive = document.getElementById('dive-freedive').checked;
+  const diveNumVal = parseInt(document.getElementById('dive-number').value);
+
   const payload = {
     user_id: USER_ID,
-    dive_number: parseInt(document.getElementById('dive-number').value),
     dive_date: new Date(dateVal).getTime(),
     location: document.getElementById('dive-location').value.trim(),
     max_depth: parseFloat(document.getElementById('dive-depth').value),
@@ -522,8 +536,13 @@ async function submitNewDive(event) {
     photo_storage_ids: photoFiles.length > 0 ? photoStorageIds : editingPhotoIds,
     buddy_check: document.getElementById('dive-buddy-check').checked,
     briefed: document.getElementById('dive-briefed').checked,
-    mode: document.getElementById('dive-freedive').checked ? 'freediving' : 'scubadiving',
+    mode: isFreedive ? 'freediving' : 'scubadiving',
   };
+  if (isFreedive) {
+    payload.freedive_number = diveNumVal;
+  } else {
+    payload.dive_number = diveNumVal;
+  }
   const clubWebsite = document.getElementById('dive-club-website').value.trim();
   if (clubWebsite) payload.club_website = clubWebsite;
   const site = document.getElementById('dive-site').value.trim();

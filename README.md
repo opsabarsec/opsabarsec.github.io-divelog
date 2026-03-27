@@ -6,7 +6,7 @@ Filling in a paper logbook after every dive takes **10–15 minutes**: writing d
 
 **DiveLog** replaces the paper book with a web app you can reach from any device, anywhere. It adds the option to log dives without bottles. Automatizes the logging process and uses AI fish identification.
 
-Key features and autimatization:
+Key features and automatization:
 
 - **Automatic geolocation** — type a location name, get GPS coordinates and an OpenStreetMap link instantly
 - **Automatic fish identification** — upload a photo of a fish and the species is identified and added to your notes by calling the API endpoint from https://www.fishial.ai/
@@ -43,15 +43,6 @@ The REST API is built with [FastAPI](https://fastapi.tiangolo.com/) and deployed
 | POST | `/identify-fish` | Identify fish species in an image |
 | POST | `/resolve-dive-metadata` | Preview geocoords + club website before submitting |
 | GET | `/search-club?q=...` | Look up a club website manually |
-
-### Environment variables
-
-```env
-CONVEX_URL=https://<deployment>.convex.cloud
-MY_EMAIL=you@example.com          # Nominatim User-Agent compliance
-FISHAL_API_ID=your_api_id
-FISHAL_API_KEY=your_api_key
-```
 
 ### Running locally
 

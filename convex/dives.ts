@@ -5,7 +5,8 @@ import { v } from "convex/values";
 export const upsertDive = mutation({
   args: {
     user_id: v.string(),
-    dive_number: v.number(),
+    dive_number: v.optional(v.number()),
+    freedive_number: v.optional(v.number()),
     dive_date: v.number(),
     location: v.string(),
 
@@ -38,15 +39,29 @@ export const upsertDive = mutation({
     Briefed: v.boolean(),
   },
   handler: async (ctx, args) => {
-    const { user_id, dive_number } = args;
+    const { user_id, dive_number, freedive_number, mode } = args;
     const now = Date.now();
+    const isFreedive = mode === "freediving";
 
-    const existing = await ctx.db
-      .query("dives")
-      .withIndex("by_dive_number", q =>
-        q.eq("user_id", user_id).eq("dive_number", dive_number)
-      )
-      .unique();
+    let existing = null;
+
+    if (isFreedive && freedive_number !== undefined) {
+      existing = await ctx.db
+        .query("dives")
+        .withIndex("by_freedive_number", q =>
+          q.eq("user_id", user_id).eq("freedive_number", freedive_number)
+        )
+        .first();
+    } else if (dive_number !== undefined) {
+      // Filter out freedives to avoid overwriting them with a same-numbered scuba dive
+      const candidates = await ctx.db
+        .query("dives")
+        .withIndex("by_dive_number", q =>
+          q.eq("user_id", user_id).eq("dive_number", dive_number)
+        )
+        .collect();
+      existing = candidates.find(d => d.mode !== "freediving") ?? null;
+    }
 
     if (existing) {
       await ctx.db.patch(existing._id, {
@@ -77,7 +92,7 @@ export const getAllDives = query({
   handler: async (ctx, args) => {
     const dives = await ctx.db
       .query("dives")
-      .withIndex("by_dive_number", (q) => q.eq("user_id", args.user_id))
+      .withIndex("by_user_id", (q) => q.eq("user_id", args.user_id))
       .collect();
     // Sort by dive_date descending (most recent first)
     return dives.sort((a, b) => b.dive_date - a.dive_date);
@@ -89,7 +104,7 @@ export const getLatestDive = query({
   handler: async (ctx, args) => {
     const dives = await ctx.db
       .query("dives")
-      .withIndex("by_dive_number", (q) => q.eq("user_id", args.user_id))
+      .withIndex("by_user_id", (q) => q.eq("user_id", args.user_id))
       .collect();
     const scubaDives = dives.filter(d => d.mode !== "freediving");
     if (scubaDives.length === 0) return null;
@@ -102,7 +117,7 @@ export const getLatestFreedive = query({
   handler: async (ctx, args) => {
     const dives = await ctx.db
       .query("dives")
-      .withIndex("by_dive_number", (q) => q.eq("user_id", args.user_id))
+      .withIndex("by_user_id", (q) => q.eq("user_id", args.user_id))
       .collect();
     const freedives = dives.filter(d => d.mode === "freediving");
     if (freedives.length === 0) return null;

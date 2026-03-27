@@ -22,7 +22,8 @@ const schema = defineSchema({
 
   dives: defineTable({
     user_id: v.string(),
-    dive_number: v.number(), // now required
+    dive_number: v.optional(v.number()),      // scuba dives only
+    freedive_number: v.optional(v.number()),  // freedives only
     dive_date: v.number(),
     location: v.string(),
 
@@ -58,7 +59,9 @@ const schema = defineSchema({
     logged_at: v.number(),
     updated_at: v.number(),
   })
-    .index("by_dive_number", ["user_id", "dive_number"]),
+    .index("by_user_id", ["user_id"])
+    .index("by_dive_number", ["user_id", "dive_number"])
+    .index("by_freedive_number", ["user_id", "freedive_number"]),
 });
 
 export default schema;
