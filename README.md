@@ -1,322 +1,130 @@
 ![Dive Log App Hero Image](./assets/hero-dive.jpg)
 
-Dive log app. Get your own free and Open Source dive logger without having to buy again a paper booklet.
+# DiveLog Web APP — Free & Open Source Digital Dive Logbook
 
-# 🐬 DiveLog Backend
+Filling in a paper logbook after every dive takes **10–15 minutes**: writing location, depth, duration, sketching the site, getting the club stamp, noting the species you spotted. Over a lifetime of diving that adds up to hours of tedious work — and the result stays on a shelf at home. Plus you need to remember to bring it in the backpack for every diving holiday.
 
-A FastAPI backend for managing scuba dive logs, powered by Convex as the database, with built‑in geolocation, club website lookup, and automated metadata enrichment.
+**DiveLog** replaces the paper book with a web app you can reach from any device, anywhere. Automatizes the logging process and uses AI fish identification
 
-This backend is designed to support a modern dive‑logging application where the user can enter intuitive, human‑friendly information (e.g., **“Lady Elliot Island”**, **“Portofino Divers”**) and the server automatically resolves:
+Key advantages over a paper logbook:
 
-*   🌍 Geographic coordinates via **Nominatim (OpenStreetMap)**
-*   🗺️ OpenStreetMap visualization links
-*   🏢 Dive club website using a custom scraper service
-*   🗃️ Stable storage in **Convex** via typed schemas and mutations
+- **Automatic geolocation** — type a location name, get GPS coordinates and an OpenStreetMap link instantly
+- **Automatic fish identification** — upload a photo of a fish and the species is identified and added to your notes
+- **Club website lookup** — the club's official website is found and linked automatically
+- **Photo upload** — attach dive photos as digital proof, viewable full-screen on mobile
+- **Accessible anywhere** — phone, tablet, or desktop, online or shared with your instructor
 
-***
+The app is **free and open source** (MIT licence). No subscription, no vendor lock-in — host it yourself or fork it.
 
-## ✨ Features
+---
 
-### ✅ **Dive Upsert API**
+## Backend
 
-Create or update a dive entry using `/dives/upsert`.  
-The backend will automatically:
+**Stack:** Python 3.12 · FastAPI · Convex · httpx · Pydantic v2
 
-*   Geocode the location (if missing latitude/longitude)
-*   Generate an OpenStreetMap link (`osm_link`)
-*   Validate all required dive metadata
-*   Store the dive record in your Convex deployment
+The REST API is built with [FastAPI](https://fastapi.tiangolo.com/) and deployed on Vercel. [Convex](https://www.convex.dev/) acts as the database and file storage backend — no SQL migrations needed, just TypeScript schema files.
 
-### 🌍 **Geolocation Service**
+### Services
 
-Located in `app/services/geolocation.py`, featuring:
+| Service | What it does |
+|---------|-------------|
+| **Geolocation** (`geolocation.py`) | Resolves a location name to GPS coordinates and an OSM link via Nominatim (OpenStreetMap). Rate-limited to 1 req/s, results cached 24 h. |
+| **Club website lookup** (`search_club_website.py`) | Searches the web for a dive club's official website and returns the URL. |
+| **Fish identification** (`fish_finder.py`) | Sends a photo to the [Fishial AI API](https://fishial.ai/) and returns the most probable species with a confidence score. |
 
-*   Nominatim search for coordinates
-*   1 request/second rate limiting
-*   24h in-memory caching
-*   Automatic OSM link builder
-*   Helpful User-Agent and optional email per Nominatim policy
+### Key API endpoints
 
-### 🔍 **Dive Club Website Search**
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/dives/upsert` | Create or update a dive record (auto-enriches coords, OSM link, club website) |
+| GET | `/dives/{id}` | Fetch a dive by Convex ID |
+| POST | `/upload-photos` | Upload one or more photos → returns `photo_storage_ids` |
+| GET | `/download-photo/{id}` | Retrieve a photo (307 redirect to signed Convex URL) |
+| POST | `/identify-fish` | Identify fish species in an image |
+| POST | `/resolve-dive-metadata` | Preview geocoords + club website before submitting |
+| GET | `/search-club?q=...` | Look up a club website manually |
 
-The endpoint `/search-club` searches the internet for the official website of a dive club.
-
-### 📷 **Photo Upload & Storage**
-
-Upload dive photos as proof of your dive—a digital replacement for the traditional stamp in paper logbooks. Photos are stored in Convex's built-in file storage and linked to dive records.
-
-*   **POST `/upload-photo`** — Upload a single image (JPEG, PNG, BMP) and receive a `photo_storage_id`
-*   **POST `/upload-photos`** — Upload multiple images and receive a list of `photo_storage_ids`
-*   **GET `/download-photo/{storage_id}`** — Retrieve a stored photo by its storage ID
-*   The `photo_storage_ids` array is a **required field** when creating/updating dives via `/dives/upsert`
-
-**Workflow:**
-1.  Upload photos via `/upload-photo` or `/upload-photos`
-2.  Receive the `photo_storage_ids` in the response
-3.  Include this array when submitting the dive record
-
-### 🐟 **Fish Identification (Fishial AI)**
-
-Identify fish species from your dive photos using the [Fishial Recognition API](https://fishial.ai/). Upload an image and get back the scientific name and accuracy of identified species.
-
-*   **POST `/identify-fish`** — Upload an image and receive species identification results
-*   Returns species names (scientific nomenclature) with confidence scores
-*   Supports JPEG, PNG, and BMP images
-
-**Example Response:**
-```json
-{
-  "success": true,
-  "species": [
-    {"name": "Triaenodon obesus", "accuracy": 0.965, "fishangler_id": "..."},
-    {"name": "Carcharhinus amblyrhynchos", "accuracy": 0.02, "fishangler_id": "..."}
-  ]
-}
-```
-
-**Use Case:** Add identified species to your dive notes for a complete record of marine life encountered during the dive.
-
-### 🔗 **Combined Metadata Resolver**
-
-The endpoint `/resolve-dive-metadata` takes:
-
-```json
-{
-  "location_name": "Portofino, Italy",
-  "club_name": "Portofino Divers"
-}
-```
-
-and returns:
-
-*   Latitude & longitude
-*   OpenStreetMap link
-*   Club website
-*   Cleaned metadata
-
-Perfect for auto‑filling frontend die log forms.
-
-***
-
-## 🏗️ Project Structure
-
-    app/
-     ├── __init__.py
-     ├── main.py                       # FastAPI app & endpoints (incl. photo upload/download)
-     └── services/
-           ├── geolocation.py          # async geocoder + caching + OSM link builder
-           ├── search_club_website.py  # dive club website scraper
-           └── fish_finder.py          # Fishial AI integration for fish identification
-    convex/
-     ├── schema.ts                     # Convex schema (dives table with photo_storage_id)
-     ├── dives.ts                      # Convex mutations & queries
-     └── files.ts                      # Convex file storage (generateUploadUrl mutation)
-    tests/
-     ├── __init__.py
-     ├── convex_storage_inspector.py   # utility to inspect/download stored files
-     ├── convex_test.py
-     ├── test_dive_upsert.py
-     ├── test_resolve_dive_metadata.py
-     └── test_upload_photo.py          # photo upload integration tests
-
-***
-
-## 🚀 Installation
-
-### 1. Clone the repository
-
-```bash
-git clone https://github.com/<your-username>/<repo>.git
-cd <repo>
-```
-
-### 2. Create a virtual environment
-
-```bash
-uv venv
-source .venv/bin/activate  # or .\.venv\Scripts\activate on Windows
-```
-
-### 3. Install dependencies
-
-```bash
-uv pip install -r requirements.txt
-```
-
-***
-
-## 🔧 Environment Variables
-
-Create a `.env` file in the project root:
+### Environment variables
 
 ```env
-CONVEX_URL=https://<your-convex-deployment>.convex.cloud
-MY_EMAIL=you@example.com
-
-# Fishial API (for fish identification)
+CONVEX_URL=https://<deployment>.convex.cloud
+MY_EMAIL=you@example.com          # Nominatim User-Agent compliance
 FISHAL_API_ID=your_api_id
 FISHAL_API_KEY=your_api_key
 ```
 
-*   `MY_EMAIL` is used for Nominatim User‑Agent compliance
-*   `CONVEX_URL` points to your Convex instance
-*   `FISHAL_API_ID` and `FISHAL_API_KEY` are your [Fishial API](https://fishial.ai/) credentials for fish identification
-
-***
-
-## ▶️ Running the Server
+### Running locally
 
 ```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+uv venv && source .venv/bin/activate
+uv pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
+npx convex dev --once              # deploy Convex schema & functions
 ```
 
-## 🧪 Testing
+---
 
-Run all tests:
+## Frontend
 
-```bash
-uv run pytest -v
+**Stack:** Vanilla HTML · CSS · JavaScript — no build step, no framework
+
+The frontend is a single-page app served as static files from [GitHub Pages](https://pages.github.com/). It communicates with the FastAPI backend via `fetch`.
+
+### Features
+
+- **My Dives** — paginated list of dive mini-cards; click any card to open a full detail view
+- **Log / Edit Dive** — modal form with all dive fields; dive number auto-increments from the last entry; club website auto-filled (editable if wrong)
+- **Photo lightbox** — tap any dive photo to view it full-screen with a close button; works on mobile
+- **Fish ID in notes** — additional photos (after the cover photo) are each sent to the fish identification API; results appear in the dive notes as `fish1: Sphyraena viridensis (98%), fish2: ...`
+- **Certifications & Checklists** — separate views for certifications and Google Doc/Sheet checklist links
+
+### File layout
+
+```
+frontend/
+├── index.html   # single HTML file — all modals and views
+├── app.js       # all UI logic — rendering, API calls, state
+└── styles.css   # CSS variables, responsive layout, lightbox, card styles
 ```
 
-Run integration tests with real Convex:
+---
 
-```bash
-CONVEX_URL=https://friendly-finch-619.convex.cloud uv run pytest -k real_convex -v -s
+## Project structure
+
+```
+dive-log-app/
+├── app/
+│   ├── main.py (or divelog.py)         # FastAPI app — all dive endpoints
+│   └── services/
+│       ├── geolocation.py
+│       ├── search_club_website.py
+│       └── fish_finder.py
+├── convex/
+│   ├── schema.ts                        # table definitions (source of truth)
+│   ├── dives.ts                         # upsertDive mutation, getDiveById query
+│   ├── checklists.ts                    # checklist CRUD
+│   └── files.ts                         # photo storage
+├── frontend/
+│   ├── index.html
+│   ├── app.js
+│   └── styles.css
+└── tests/
 ```
 
-Run fish identification integration test (requires Fishial API credentials):
-
-```bash
-uv run pytest tests/test_dive_upsert.py::test_fish_identification_shark_in_dive_notes -v -s
-```
-
-This test uploads `assets/shark.jpg`, identifies the species via Fishial AI, creates a dive entry with the identified species in the notes, and verifies "shark" appears in the retrieved dive notes.
-
-***
-
-## 📡 API Endpoints Overview
-
-### **POST /upload-photo**
-
-Upload a single dive photo (JPEG, PNG, BMP). Returns `{ "photo_storage_id": "..." }`.
-
-### **POST /upload-photos**
-
-Upload multiple dive photos. Returns `{ "photo_storage_ids": ["id1", "id2", ...] }`.
-
-### **GET /download-photo/{storage_id}**
-
-Download a stored photo by its Convex storage ID.
-
-### **POST /identify-fish**
-
-Identify fish species in an image using Fishial AI. Returns species names with accuracy scores.
-
-### **POST /resolve-dive-metadata**
-
-Returns coordinates, OSM link, and website for a given location & club.
-
-### **POST /dives/upsert**
-
-Creates or updates a dive record in Convex. Requires `photo_storage_ids` array from `/upload-photos`.
-
-### **GET /dives/{id}**
-
-Retrieves a stored dive (includes photo_storage_ids for fetching the photos).
-
-### **GET /search-club?q=Club Name**
-
-Returns the official dive club website, if found.
-
-***
-
-## 🗺️ How Geolocation Works
-
-Your backend uses:
-
-*   `aiohttp` for async HTTP requests
-*   Rate limiter to avoid Nominatim blocking
-*   In-memory TTL cache
-*   Cleaned user input (`location_name`)
-*   Automatic OSM link generation
-
-Example link:
-
-    https://www.openstreetmap.org/?mlat=44.303&mlon=9.209#map=16/44.303/9.209
-
-***
-
-## 🏛️ Convex Integration
-
-Dive schema includes:
-
-*   Required dive metadata
-*   Optional attributes (notes, site, temperature, etc.)
-*   Auto-updated fields: `logged_at`, `updated_at`
-*   `osm_link` for map visualization
-*   `photo_storage_ids` (required) — array of Convex file storage IDs for multiple photos
-
-**File Storage:**
-*   Photos are stored in Convex's built-in file storage
-*   `files.ts` exposes a `generateUploadUrl` mutation for secure uploads
-*   Storage IDs are stable references to uploaded files
-*   Multiple photos can be attached to a single dive entry
-
-Convex table is typed and indexed via `schema.ts` and `dives.ts`.
-
-Deploy updated schema:
-
-```bash
-npx convex deploy
-```
-
-***
-
-## 🤖 Combined Metadata Workflow
-
-The frontend can now:
-
-1.  Call `/resolve-dive-metadata` with location & club name
-2.  Pre-fill the dive form with returned metadata
-3.  Submit the completed dive via `/dives/upsert`
-
-Smooth user experience + clean backend = 💙
-
-***
-
-## 📦 Roadmap
-
-*   🌐 Add Redis-backed geolocation cache
-*   🧭 Add bounding box or multi-match geolocation
-*   📍 Full dive-site database integration
-*   🔐 API keys & auth layer
-*   🗺️ Built-in static map previews
-*   📊 Analytics on dive locations
-
-***
+---
 
 ## Contributing
 
-Contributions are welcome! Please follow the standard GitHub flow:
-
-1.  Fork the repository
-2.  Create a feature branch
-3.  Commit your changes
-4.  Push to the branch
-5.  Create a Pull Request
+Contributions are welcome — fork, branch, PR.
 
 ## License
 
-MIT License - feel free to use this project for personal or commercial purposes.
-
-## Support
-
-For issues or questions, please open a GitHub issue or contact the maintainer.
+MIT — free for personal and commercial use.
 
 ## Author
 
-Marco Berta - <https://github.com/opsabarsec>
+Marco Berta — https://github.com/opsabarsec
 
-***
+---
 
-**Stay safe and happy diving!** 🐠🌊🌍
+**Happy diving!** 🐠🌊
