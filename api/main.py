@@ -638,6 +638,11 @@ async def get_config() -> dict:
         "name_surname": os.getenv("NAME_SURNAME", "Diver"),
         "convex_url": CONVEX_URL,
         "profile_photo": os.getenv("PROFILE_PHOTO", ""),
+        "address": os.getenv("ADDRESS", ""),
+        "my_number": os.getenv("MY_NUMBER", ""),
+        "my_email": os.getenv("MY_EMAIL", ""),
+        "emergency_contact": os.getenv("EMERGENCY_CONTACT", ""),
+        "emergency_contact_number": os.getenv("EMERGENCY_CONTACT_NUMBER", ""),
     }
 
 

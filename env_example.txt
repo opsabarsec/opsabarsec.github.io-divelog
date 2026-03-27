@@ -14,7 +14,7 @@ EMERGENCY_CONTACT = Uncle Berry
 
 EMERGENCY_CONTACT_NUMBER = 0456322091
 
-# Deployment used by `npx convex dev`
+deployment used by `npx convex dev`
 # Convex Configuration
 
 CONVEX_DEPLOYMENT= 'dev:given-name-419'

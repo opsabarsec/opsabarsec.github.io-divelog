@@ -68,6 +68,23 @@ async function loadConfig() {
       document.getElementById('profile-name').textContent = USER_NAME;
       document.title = `Divelog ${USER_NAME}`;
 
+      // Contact info
+      const contactLines = [];
+      if (config.address) contactLines.push(`<span id="profile-address">${config.address}</span>`);
+      if (config.my_number) contactLines.push(`<span id="profile-number">${config.my_number}</span>`);
+      if (config.my_email) contactLines.push(`<span id="profile-email">${config.my_email}</span>`);
+      if (contactLines.length > 0) {
+        const contactEl = document.getElementById('profile-contact');
+        contactEl.innerHTML = contactLines.join('<br>');
+        contactEl.style.display = 'block';
+      }
+
+      // Emergency contact
+      if (config.emergency_contact || config.emergency_contact_number) {
+        document.getElementById('emergency-name').textContent = config.emergency_contact;
+        document.getElementById('emergency-number').textContent = config.emergency_contact_number;
+        document.getElementById('emergency-section').style.display = 'block';
+      }
     }
   } catch (error) {
     console.error('Failed to load config:', error);
