@@ -356,6 +356,7 @@ function renderCertCard(cert) {
         <div class="cert-detail"><span class="cert-detail-label">Date</span><span class="cert-detail-value">${formatDate(cert.certification_date)}</span></div>
         ${cert.certification_number ? `<div class="cert-detail"><span class="cert-detail-label">Number</span><span class="cert-detail-value">${cert.certification_number}</span></div>` : ''}
         ${cert.instructor_name ? `<div class="cert-detail"><span class="cert-detail-label">Instructor</span><span class="cert-detail-value">${cert.instructor_name}</span></div>` : ''}
+        ${cert.dive_center ? `<div class="cert-detail"><span class="cert-detail-label">Club</span><span class="cert-detail-value">${cert.dive_center}</span></div>` : ''}
       </div>
       ${cert.photo_url ? `<img src="${cert.photo_url}" alt="${cert.name}" class="cert-badge-img">` : ''}
       <div class="cert-actions">

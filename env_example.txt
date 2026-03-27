@@ -8,7 +8,7 @@ ADDRESS = '14 Rue d'Anthoine, 13002 Marseille, France'
 
 MY_NUMBER = 0456322090
 
-MY_EMAIL = 
+MY_EMAIL = gipo@gmail.com
 
 EMERGENCY_CONTACT = Uncle Berry
 
