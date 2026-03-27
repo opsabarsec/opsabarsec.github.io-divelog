@@ -5,7 +5,8 @@
       "Bash(python -c \"import ast; ast.parse\\(open\\(''api/main.py''\\).read\\(\\)\\); print\\(''OK''\\)\")",
       "Bash(curl -s \"https://opsabarsec-github-io-divelog.vercel.app/checklists\")",
       "Bash(curl -s https://opsabarsec.github.io/opsabarsec.github.io-divelog/app.js)",
-      "Bash(curl -s https://opsabarsec.github.io/opsabarsec.github.io-divelog/styles.css)"
+      "Bash(curl -s https://opsabarsec.github.io/opsabarsec.github.io-divelog/styles.css)",
+      "Bash(npx convex:*)"
     ]
   }
 }

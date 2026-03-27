@@ -61,6 +61,7 @@ class Dive(BaseModel):
 
     buddy_check: bool = Field(default=True, serialization_alias="Buddy_check")
     briefed: bool = Field(default=True, serialization_alias="Briefed")
+    mode: Optional[str] = "scubadiving"  # "scubadiving" | "freediving"
 
 
 class Certification(BaseModel):
@@ -439,6 +440,36 @@ async def get_latest_dive(user_id: str = Query(..., description="User ID")) -> A
     print(f"[DEBUG] getLatestDive result for {user_id}: {result}")
     if result is None:
         return JSONResponse(status_code=404, content={"error": "No dives found for user"})
+
+    return result
+
+
+# ---------------------------------------------------------
+# Get Latest Freedive
+# ---------------------------------------------------------
+
+
+@app.get("/dives/latest-freedive")
+async def get_latest_freedive(user_id: str = Query(..., description="User ID")) -> Any:
+    """Get the most recent freedive for a user."""
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            f"{CONVEX_URL}/api/query",
+            json={
+                "path": "dives:getLatestFreedive",
+                "args": {"user_id": user_id},
+                "format": "json",
+            },
+        )
+        resp.raise_for_status()
+        data = resp.json()
+
+    if "error" in data:
+        return JSONResponse(status_code=400, content={"error": data["error"]})
+
+    result = data.get("value")
+    if result is None:
+        return JSONResponse(status_code=404, content={"error": "No freedives found for user"})
 
     return result
 

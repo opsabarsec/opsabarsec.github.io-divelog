@@ -99,9 +99,12 @@ async function loadLatestDive() {
   container.innerHTML = '<div class="loading">Loading latest dive...</div>';
 
   try {
-    const response = await fetch(`${DIVES_API}/dives/latest?user_id=${USER_ID}`);
+    const [latestResp, latestFreediveResp] = await Promise.all([
+      fetch(`${DIVES_API}/dives/latest?user_id=${USER_ID}`),
+      fetch(`${DIVES_API}/dives/latest-freedive?user_id=${USER_ID}`),
+    ]);
 
-    if (response.status === 404) {
+    if (latestResp.status === 404) {
       container.innerHTML = `
         <div class="empty-state">
           <h3>No dives logged yet</h3>
@@ -110,9 +113,21 @@ async function loadLatestDive() {
       return;
     }
 
-    if (!response.ok) throw new Error();
-    const dive = await response.json();
-    container.innerHTML = renderDiveCard(dive, true);
+    if (!latestResp.ok) throw new Error();
+    const dive = await latestResp.json();
+
+    let html = renderDiveCard(dive, true);
+
+    if (latestFreediveResp.ok) {
+      const freedive = await latestFreediveResp.json();
+      // Only show freedive section if it's a different dive than the latest
+      if (freedive && freedive._id !== dive._id) {
+        html += `<h2 class="section-title" style="margin-top:30px;">Latest Freedive</h2>`;
+        html += renderDiveCard(freedive, true);
+      }
+    }
+
+    container.innerHTML = html;
 
   } catch (error) {
     container.innerHTML = `
@@ -150,7 +165,7 @@ function renderDiveCard(dive, showActions = true) {
     <div class="dive-card">
       <div class="dive-card-header">
         <div class="dive-info">
-          <div class="dive-number">Dive #${dive.dive_number}</div>
+          <div class="dive-number">Dive #${dive.dive_number}${dive.mode === 'freediving' ? ' <span class="freedive-badge">freedive</span>' : ''}</div>
           <div class="dive-location">${dive.location}</div>
           ${dive.site ? `<div class="dive-site">${dive.site}</div>` : ''}
           ${osmLinkHtml}
@@ -218,7 +233,7 @@ function renderDiveMiniCard(dive) {
     <div class="dive-card-mini" onclick="showDiveDetail('${dive._id}')" style="cursor:pointer;">
       <div class="dive-card-mini-header">
         <div>
-          <div class="dive-number">Dive #${dive.dive_number}</div>
+          <div class="dive-number">Dive #${dive.dive_number}${dive.mode === 'freediving' ? ' <span class="freedive-badge">freedive</span>' : ''}</div>
           <div class="dive-location">${dive.location}</div>
           ${dive.site ? `<div class="dive-site">${dive.site}</div>` : ''}
         </div>
@@ -270,6 +285,7 @@ async function editDive(id) {
   document.getElementById('dive-notes').value = dive.notes || '';
   document.getElementById('dive-buddy-check').checked = dive.Buddy_check ?? true;
   document.getElementById('dive-briefed').checked = dive.Briefed ?? true;
+  document.getElementById('dive-freedive').checked = dive.mode === 'freediving';
 
   // Close detail modal if open, then open edit form
   closeDiveDetailModal();
@@ -488,6 +504,7 @@ async function submitNewDive(event) {
     photo_storage_ids: photoFiles.length > 0 ? photoStorageIds : editingPhotoIds,
     buddy_check: document.getElementById('dive-buddy-check').checked,
     briefed: document.getElementById('dive-briefed').checked,
+    mode: document.getElementById('dive-freedive').checked ? 'freediving' : 'scubadiving',
   };
   const clubWebsite = document.getElementById('dive-club-website').value.trim();
   if (clubWebsite) payload.club_website = clubWebsite;

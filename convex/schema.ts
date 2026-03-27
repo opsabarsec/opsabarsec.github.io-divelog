@@ -47,6 +47,9 @@ const schema = defineSchema({
     club_website: v.optional(v.string()),
     notes: v.optional(v.string()),
 
+    // Dive mode
+    mode: v.optional(v.string()),  // "scubadiving" | "freediving", defaults to "scubadiving"
+
     // Flags from Convex mutation (PascalCase preserved)
     Buddy_check: v.boolean(),
     Briefed: v.boolean(),

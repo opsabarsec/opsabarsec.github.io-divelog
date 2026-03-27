@@ -30,6 +30,9 @@ export const upsertDive = mutation({
     club_website: v.optional(v.string()),
     notes: v.optional(v.string()),
 
+    // Dive mode
+    mode: v.optional(v.string()),
+
     // Flags
     Buddy_check: v.boolean(),
     Briefed: v.boolean(),
@@ -91,6 +94,19 @@ export const getLatestDive = query({
     if (dives.length === 0) return null;
     // Return the dive with the most recent dive_date
     return dives.sort((a, b) => b.dive_date - a.dive_date)[0];
+  },
+});
+
+export const getLatestFreedive = query({
+  args: { user_id: v.string() },
+  handler: async (ctx, args) => {
+    const dives = await ctx.db
+      .query("dives")
+      .withIndex("by_dive_number", (q) => q.eq("user_id", args.user_id))
+      .collect();
+    const freedives = dives.filter(d => d.mode === "freediving");
+    if (freedives.length === 0) return null;
+    return freedives.sort((a, b) => b.dive_date - a.dive_date)[0];
   },
 });
 
